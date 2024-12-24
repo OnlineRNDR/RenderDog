@@ -11,6 +11,10 @@
    
 
 
+<!-- ###################################### -->
+<!-- ######### Main Parser    ############# -->
+<!-- ###################################### -->
+
 
 <script>
 	
@@ -624,6 +628,11 @@ function convertTime() {
     
     <!-- Main Table Layout -->
 <table>
+<!-- ###################################### -->
+<!-- ######### Left Side      ############# -->
+<!-- ###################################### -->
+
+
     <tr>
         <!-- Left Column (Logo, File Input, and Date Pickers) -->
        <td id="leftColumn">
@@ -687,7 +696,9 @@ function convertTime() {
 </td>
 
 
-
+<!-- ###################################### -->
+<!-- ######### Middle Section ############# -->
+<!-- ###################################### -->
 <td id="middleColumn">
 
 
@@ -734,18 +745,19 @@ function convertTime() {
    
 
 	
-
+<!-- ###################################### -->
+<!-- ####### Right Side Column ############ -->
+<!-- ###################################### -->
          
-<!-- Right Column (Seconds Convert and Price Calc) -->
+
 <td id="rightColumn">
 
 	<div class="logo-container">
 			<div class="button-container">
-				<!-- Label styled as a button -->
+				
 	
   <button id="completionButton">Waiting Report</button>
-  <!-- Button for Weekly Reports (Multiple Files) -->
-	<button id="weeklyStatusButton">Waiting Weekly</button>
+  <button id="weeklyStatusButton">Waiting Weekly</button>
 
 			</div>
 			<a href="html/overview.html" target="_blank">
@@ -938,7 +950,9 @@ function convertTime() {
 </div>
 
 
-
+<!-- ###################################### -->
+<!-- ######### END OF HTML    ############# -->
+<!-- ###################################### -->
 
 
  
@@ -955,8 +969,10 @@ function convertTime() {
 
 </body>
 <script>
-
-
+    /////////////////////////////////
+	////Save Results in Container////
+	/////////////////////////////////
+	
 	// Function to save the content of the resultContainer as a .txt file
 	function saveResultContainer() {
 		const resultContainer = document.getElementById('resultContainer');
@@ -1368,7 +1384,10 @@ function showCompletionButton(resultText) {
 </script>
 
 <script>
-// Select the DOM elements
+/////////////////////////////////
+////Calender Code for Navigation 
+/////////////////////////////////
+
 const startDateInput = document.querySelector('#startDate');
 const endDateInput = document.querySelector('#endDate');
 const moveLeftButton = document.querySelector('#moveLeft');
@@ -1474,7 +1493,9 @@ endDateInput.dispatchEvent(new Event('change'));
 
 <script>
 
-
+/////////////////////////////////
+//// Render Time Bar Chart/////// 
+/////////////////////////////////
 
 // Bar Chart Data with the new Total Days label
 const barChartData = {
@@ -1636,6 +1657,11 @@ const lineChart = new Chart(document.getElementById('lineChart'), lineChartConfi
 
 
 <script>
+
+//////////////////////////////////////////////////
+//// Workaround for setting calender dates /////// 
+//////////////////////////////////////////////////
+
     document.addEventListener('DOMContentLoaded', function () {
         // Ensure the DOM elements exist before adding event listeners
         const fileInput = document.getElementById('fileInput');
@@ -1829,6 +1855,9 @@ const lineChart = new Chart(document.getElementById('lineChart'), lineChartConfi
 })();
 </script>
 <script>
+//////////////////////////////////////////////////////
+//// Adds Text on first load in the result cont/////// 
+/////////////////////////////////////////////////////
 // Initialize the text to be displayed
 const resultText = ` 
  > RNDR-DOG V 1.0 (alpha)<br>
@@ -1843,7 +1872,7 @@ const resultText = `
  > Please consider donating and helping improve the project<br>
  
  <br>
-
+ > https://github.com/OnlineRNDR/RenderDog/
 `;
 
 // Function to directly display the text
@@ -1857,6 +1886,11 @@ displayText('resultContainer', resultText);
 </script>
 
 <script>
+////////////////////////////////////
+//// Toogle for Debug Window /////// 
+////////////////////////////////////
+
+
 function toggleLogData() {
   const logDataContainer = document.getElementById('LOGDATA_CONTAINER');
   if (logDataContainer.style.display === 'none') {
@@ -1868,6 +1902,10 @@ function toggleLogData() {
 
 </script>
 <script>
+////////////////////////////////////////////////
+//// Simulates explicit savedate trigger /////// 
+///////////////////////////////////////////////
+
 // Crappy workaround for the savedate function, simulate button press
 document.getElementById('exportContentButton').addEventListener('click', function() {
     // Trigger the click event for #storeLastRangeButton first
@@ -1890,6 +1928,10 @@ document.getElementById('exportWeeklyButton').addEventListener('click', function
 
 
 <script>
+////////////////////////////////////
+//// Loads Report from fileupload /////// 
+////////////////////////////////////
+
 //Disabled, load report from front page.
 	// File Report Upload Button
     //const fileInput = document.getElementById('uploadFileInput');
@@ -1914,6 +1956,12 @@ document.getElementById('exportWeeklyButton').addEventListener('click', function
 //</script>
 
 <script>
+///////////////////////////////////////////////////////////////////////
+//// Monitors result container and parses text to quick summary /////// 
+///////////////////////////////////////////////////////////////////////
+
+
+
     // Function to initialize the stats overview process with a MutationObserver
     function initializeStatsOverview(resultContainerId, statsOverviewContainerId) {
         const resultContainer = document.getElementById(resultContainerId);
@@ -2002,7 +2050,9 @@ document.getElementById('exportWeeklyButton').addEventListener('click', function
     `;
 }
 	
-	
+////////////////////////////////////////////////
+//// Updates Pie Chart and quick Summary/////// 
+///////////////////////////////////////////////	
 	
 
     // Function to update the chart from result text
