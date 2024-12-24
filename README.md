@@ -12,6 +12,10 @@ SOL Account: 9ZbhsKHn9Xx6ShP3bRozzVmLHrMox9Uw5p8LioVakeAP
 
 # RenderDog - Log File Toolkit
 
+
+
+
+
 ![Screenshot 2024-12-24 003602](https://github.com/user-attachments/assets/0b5f0a9c-cd49-4369-8a19-633548fd1d1a)
 
 Render-Dog is a specialized tool designed to parse, analyze, and summarize log files from the Render Network, enabling users to track and troubleshoot rendering activity effectively. Key features include:
@@ -43,7 +47,7 @@ Frame Cost Calculator:
 Enables users to input token data to estimate rendering costs on the Render Network.
 Render-Dog provides an all-in-one solution for professionals using the Render Network, combining detailed log insights, visual analytics, and cost estimation to optimize workflows and improve rendering efficiency.
 
- 
+ ![Untitled-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/9f7f47a8-f49c-48ce-8e4d-613a83f31c33)
 ![image](https://github.com/user-attachments/assets/34f666fc-cac6-4047-991d-d3fec4cd46f0)
 
 # Interface
