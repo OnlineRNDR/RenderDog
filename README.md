@@ -1,7 +1,11 @@
 
 ![logo](https://github.com/user-attachments/assets/86167d0a-3c5b-4aed-afba-d1049a1553c4)
 
-Help keep the project alive, Donate some Render / Sol 
+If you find this project useful, consider supporting it by donating some Render tokens or Sol!
+
+If donating isn’t your thing, feel free to contribute by helping maintain or improve the project. Right now, we only use one external source for Chart.js, and there’s plenty of room for adding more functionality.
+
+That said, the goal has always been to keep things simple and streamlined, without relying on external APIs or data. Any help—whether it's donations, feedback, or code contributions—is greatly appreciated!
 
 SOL Account: 9ZbhsKHn9Xx6ShP3bRozzVmLHrMox9Uw5p8LioVakeAP
 
