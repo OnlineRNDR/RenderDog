@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text File Comparator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .file-input {
+            margin-bottom: 20px;
+        }
+        .comparison-container {
+            display: flex;
+            gap: 20px;
+        }
+        .text-container {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: #f9f9f9;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            height: 800px;
+			width: 500px;
+        }
+        .comparison-result {
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+        .diff-added {
+            background-color: #d4edda;
+        }
+        .diff-removed {
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <h1>Text File Comparator</h1>
+
+    <div class="file-input">
+        <label for="file1">Choose first file:</label>
+        <input type="file" id="file1" accept=".txt">
+    </div>
+
+    <div class="file-input">
+        <label for="file2">Choose second file:</label>
+        <input type="file" id="file2" accept=".txt">
+    </div>
+
+    <button id="compareButton">Compare Files</button>
+
+    <div class="comparison-container">
+        <div class="text-container" id="text1Container">
+            <p>First file content will appear here.</p>
+        </div>
+        <div class="text-container" id="text2Container">
+            <p>Second file content will appear here.</p>
+        </div>
+    </div>
+
+   
+
+    <script>
+        document.getElementById('compareButton').addEventListener('click', async () => {
+            const file1 = document.getElementById('file1').files[0];
+            const file2 = document.getElementById('file2').files[0];
+
+            if (!file1 || !file2) {
+                alert('Please select both files.');
+                return;
+            }
+
+            const text1 = await file1.text();
+            const text2 = await file2.text();
+
+            document.getElementById('text1Container').textContent = text1;
+            document.getElementById('text2Container').textContent = text2;
+
+            const diffResult = compareText(text1, text2);
+            document.getElementById('result').innerHTML = diffResult;
+        });
+
+        function compareText(text1, text2) {
+            const lines1 = text1.split('\n');
+            const lines2 = text2.split('\n');
+
+            let result = '';
+
+            const maxLength = Math.max(lines1.length, lines2.length);
+            for (let i = 0; i < maxLength; i++) {
+                if (lines1[i] === lines2[i]) {
+                    result += `<div>${lines1[i] || ''}</div>`;
+                } else {
+                    if (lines1[i] !== undefined) {
+                        result += `<div class="diff-removed">- ${lines1[i]}</div>`;
+                    }
+                    if (lines2[i] !== undefined) {
+                        result += `<div class="diff-added">+ ${lines2[i]}</div>`;
+                    }
+                }
+            }
+
+            return result;
+        }
+    </script>
+</body>
+</html>

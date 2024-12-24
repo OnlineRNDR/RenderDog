@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="..\Images\square.png" type="image/png">
+  <title>Pong</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial, sans-serif;
+      background-color: black;
+      color: white;
+    }
+    canvas {
+      border: 2px solid white;
+      display: block;
+      margin: 20px auto;
+      background-color: black;
+    }
+    #scoreboard {
+      font-size: 50px;
+      margin-bottom: 10px;
+    }
+	
+		    /* Styles for the top-left corner home icon */
+    #home-icon {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      
+      
+      padding: 5px;
+      border-radius: 5px;
+      
+    }
+
+  </style>
+</head>
+<body>
+   <!-- Home Icon Div -->
+
+  <div id="scoreboard">
+    <span id="playerScore">0</span> | <span id="computerScore">0</span>
+  </div>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const scoreboard = document.getElementById('scoreboard');
+  
+  // Game constants
+  const paddleHeight = 60, paddleWidth = 10;
+  const paddleOffset = 40; // Offset from canvas border
+  const ballSize = 10;
+  const ballSpeedIncrease = 0.5; // Speed increment per hit
+  const computerSpeed = 3; // Speed of computer paddle
+
+  // Paddle positions
+  let playerY = canvas.height / 2 - paddleHeight / 2;
+  let computerY = canvas.height / 2 - paddleHeight / 2;
+
+  // Ball position and speed
+  let ballX = canvas.width / 2;
+  let ballY = canvas.height / 2;
+  let ballSpeedX = 4;
+  let ballSpeedY = 2;
+
+  // Score
+  let playerScore = 0, computerScore = 0;
+
+  // Screen shake parameters
+  let isShaking = false;
+  let shakeMagnitude = 5;
+  let shakeDuration = 300;
+  let shakeTimeout;
+
+  // Scoreboard elements
+  const playerScoreElement = document.getElementById('playerScore');
+  const computerScoreElement = document.getElementById('computerScore');
+
+  // Game loop
+  function gameLoop() {
+    moveBall();
+    moveComputerPaddle();
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  // Ball movement logic
+  function moveBall() {
+    ballX += ballSpeedX;
+    ballY += ballSpeedY;
+
+    // Ball collision with top and bottom walls
+    if (ballY <= 0 || ballY >= canvas.height - ballSize) {
+      ballSpeedY *= -1;
+    }
+
+    // Ball collision with player paddle
+    if (
+      ballX <= paddleOffset + paddleWidth &&
+      ballY + ballSize >= playerY &&
+      ballY <= playerY + paddleHeight
+    ) {
+      ballSpeedX *= -1;
+      increaseBallSpeed();
+    }
+
+    // Ball collision with computer paddle
+    if (
+      ballX + ballSize >= canvas.width - paddleOffset - paddleWidth &&
+      ballY + ballSize >= computerY &&
+      ballY <= computerY + paddleHeight
+    ) {
+      ballSpeedX *= -1;
+      increaseBallSpeed();
+    }
+
+    // Ball out of bounds
+    if (ballX <= 0) {
+      computerScore++;
+      updateScoreboard();
+      resetBall();
+      triggerScreenShake();
+    } else if (ballX >= canvas.width) {
+      playerScore++;
+      updateScoreboard();
+      resetBall();
+      triggerScreenShake();
+    }
+  }
+
+  // Increase ball speed after paddle collision
+  function increaseBallSpeed() {
+    if (ballSpeedX > 0) {
+      ballSpeedX += ballSpeedIncrease;
+    } else {
+      ballSpeedX -= ballSpeedIncrease;
+    }
+    if (ballSpeedY > 0) {
+      ballSpeedY += ballSpeedIncrease;
+    } else {
+      ballSpeedY -= ballSpeedIncrease;
+    }
+  }
+
+  // Reset ball position and speed
+  function resetBall() {
+    ballX = canvas.width / 2;
+    ballY = canvas.height / 2;
+    ballSpeedX = ballSpeedX > 0 ? 4 : -4; // Reset speed and direction
+    ballSpeedY = Math.random() > 0.5 ? 2 : -2;
+  }
+
+  
+  // Intelligent computer paddle movement
+function moveComputerPaddle() {
+  // Predict the ball's future Y position
+  const timeToReachComputer = (canvas.width - paddleOffset - paddleWidth - ballX) / Math.abs(ballSpeedX);
+  const predictedY = ballY + ballSpeedY * timeToReachComputer;
+
+  // Target the predicted Y position
+  const targetY = Math.min(Math.max(predictedY - paddleHeight / 2, 0), canvas.height - paddleHeight);
+
+  // Move computer paddle toward targetY
+  if (computerY < targetY) {
+    computerY += computerSpeed * 1.5; // Increase speed multiplier to make it faster
+  } else if (computerY > targetY) {
+    computerY -= computerSpeed * 1.5;
+  }
+
+  // Clamp paddle within canvas
+  if (computerY < 0) computerY = 0;
+  if (computerY + paddleHeight > canvas.height) computerY = canvas.height - paddleHeight;
+}
+
+
+  // Update the scoreboard
+  function updateScoreboard() {
+    playerScoreElement.textContent = playerScore;
+    computerScoreElement.textContent = computerScore;
+  }
+
+  // Draw game elements
+  function draw() {
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw dashed center line
+    ctx.strokeStyle = 'white';
+    ctx.setLineDash([10, 10]); // Dash pattern: 10px filled, 10px gap
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2, 0);
+    ctx.lineTo(canvas.width / 2, canvas.height);
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset dash pattern
+
+    // Draw paddles
+    ctx.fillStyle = 'white';
+    ctx.fillRect(paddleOffset, playerY, paddleWidth, paddleHeight); // Player paddle
+    ctx.fillRect(canvas.width - paddleOffset - paddleWidth, computerY, paddleWidth, paddleHeight); // Computer paddle
+
+    // Draw ball
+    ctx.fillRect(ballX, ballY, ballSize, ballSize);
+  }
+
+  // Player paddle movement
+  window.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const root = document.documentElement;
+    let mouseY = event.clientY - rect.top - root.scrollTop;
+    playerY = mouseY - paddleHeight / 2;
+
+    // Clamp paddle within canvas
+    if (playerY < 0) playerY = 0;
+    if (playerY + paddleHeight > canvas.height) playerY = canvas.height - paddleHeight;
+  });
+
+  // Screen shake effect
+  function triggerScreenShake() {
+    if (isShaking) return; // Prevent overlapping shakes
+    isShaking = true;
+
+    const startTime = Date.now();
+
+    function shake() {
+      if (Date.now() - startTime > shakeDuration) {
+        isShaking = false;
+        canvas.style.transform = '';
+        return;
+      }
+
+      const offsetX = (Math.random() - 0.5) * shakeMagnitude;
+      const offsetY = (Math.random() - 0.5) * shakeMagnitude;
+      canvas.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+      scoreboard.style.transform = `translate(${offsetX / 2}px, ${offsetY / 2}px)`;
+
+      requestAnimationFrame(shake);
+    }
+
+    shake();
+  }
+
+  // Start game
+  gameLoop();
+</script>
+
+</body>
+</html>

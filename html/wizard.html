@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" href="..\images\square4.png" type="image/png">
+    <title>Log Wizard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #2e2e2e;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .logo {
+            width: 350px;
+            height: auto;
+        }
+
+        .container {
+            flex: 1;
+            text-align: left;
+            margin-left: 20px;
+        }
+
+        #logFile {
+            display: none;
+        }
+
+        label {
+            padding: 10px 20px;
+            background-color: #1e88e5;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        label:hover {
+            background-color: #1565c0;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #43a047;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #2e7d32;
+        }
+
+        input[type="text"], select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            margin: 10px 0;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        #output {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+
+        #output a {
+            color: #1e88e5;
+            text-decoration: none;
+            margin: 20px 0;
+            display: block;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        #output a:hover {
+            text-decoration: underline;
+        }
+
+        #filteredResults {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: #444;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #ddd;
+            white-space: pre-wrap;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+        }
+
+        .filter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
+        }
+		
+		    /* Styles for the top-left corner home icon */
+    #home-icon {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      
+      
+      padding: 5px;
+      border-radius: 5px;
+      
+    }
+
+    #home-icon a {
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      align-items: center;
+    }
+
+    #home-icon img {
+      width: 32px;
+      height: 32px;
+      margin-right: 5px;
+    }
+    </style>
+</head>
+<body>
+	  <!-- Home Icon Div -->
+  <div id="home-icon">
+    <a href="../Render_Dog_Main.html">
+      <img src="../Images/home-icon.png" alt="Home Icon">
+      
+    </a>
+  </div>
+    <div class="main-container">
+        <img src="..\images\wizard.png" alt="Logo" class="logo">
+        <div class="container">
+            <h4>Filter rndr_log.txt and export</h4>
+            <input type="file" id="logFile" accept=".log,.txt">
+            <label for="logFile">Upload Log File</label>
+			 <button id="filterButton">Filter Log File</button>
+
+            <div class="filter-section">
+                <select id="phraseDropdown">
+                    <option value="">Select a common phrase</option>
+                    <option value="starting a new render job with config hash">starting a new render job with config hash</option>
+                    <option value="job failed with config hash">job failed with config hash</option>
+                    <option value="sent render finished, job completed successfully">sent render finished, job completed successfully</option>
+                    <option value="rndr client is starting...">rndr client is starting...</option>
+                    <option value="ERROR:">ERROR:</option>
+                    <option value="WARNING:">WARNING:</option>
+                    <option value="Loaded c4d scene">Loaded c4d scene</option>
+                    <option value="Loaded c4d renderer setting">Loaded c4d renderer setting</option>
+                    <option value="Started c4d rendering">Started c4d rendering</option>
+                    <option value="client is aborting a render">client is aborting a render</option>
+                    <option value="too many consecutive failures, restarting">too many consecutive failures, restarting</option>
+                    <option value="failing job, resource usage is too high and has exceeded the grace period">failing job, resource usage is too high and has exceeded the grace period</option>
+                    <option value="error: octane core failed">error: octane core failed</option>
+                    <option value="Started Blender rendering">Started Blender rendering</option>
+                    <option value="job was canceled">job was canceled</option>
+                </select>
+
+                <input type="text" id="phraseInput" placeholder="Or enter a custom phrase">
+               
+            </div>
+        </div>
+    </div>
+
+    <div id="output">
+        <div id="filteredResults"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('logFile');
+        const filterButton = document.getElementById('filterButton');
+        const phraseInput = document.getElementById('phraseInput');
+        const phraseDropdown = document.getElementById('phraseDropdown');
+        const output = document.getElementById('output');
+        const filteredResultsDiv = document.getElementById('filteredResults');
+
+        // Initialize filtered results with a welcome message
+        const resultText = ` 
+>RNDR-DOG V 1.0 (alpha)
+<br>
+> Welcome to the Render-Dog Log Wizard
+> For Node Operators using the Render Network  
+> Due to the nature of RNDR-LOG, consider this experimental
+> You can locate your RNDR-LOG here: 
+> C:\\Users\\USERNAME\\AppData\\Local\\OtoyRndrNetwork 
+<br>
+> Please consider donating and helping improve the project  
+> (╯°□°)╯︵ ┻━┻  
+<br>
+> Filter and Export Lines from your file`;
+        filteredResultsDiv.innerHTML = resultText;
+
+        // Show the filter button when a file is selected
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                filterButton.style.display = 'inline-block';
+            } else {
+                filterButton.style.display = 'none';
+            }
+        });
+
+        // Sync the dropdown and custom input
+        phraseDropdown.addEventListener('change', () => {
+            if (phraseDropdown.value) {
+                phraseInput.value = phraseDropdown.value;
+            }
+        });
+
+        filterButton.addEventListener('click', () => {
+            output.innerHTML = '<p>Processing... Please wait.</p>';
+            filteredResultsDiv.innerHTML = ''; // Clear filtered results
+
+            if (!fileInput.files.length) {
+                alert('Please select a log file first.');
+                output.innerHTML = '';
+                return;
+            }
+
+            const phraseToKeep = phraseInput.value.trim();
+            if (!phraseToKeep) {
+                alert('Please select or enter a phrase to filter by.');
+                output.innerHTML = '';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            if (!file.name.endsWith('.log') && !file.name.endsWith('.txt')) {
+                alert('Please upload a valid .log or .txt file.');
+                output.innerHTML = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const fileContent = event.target.result;
+                    const lines = fileContent.split(/\r?\n/);
+
+                    // Filter lines containing the phrase
+                    const filteredLines = lines.filter(line => line.includes(phraseToKeep));
+
+                    if (filteredLines.length === 0) {
+                        output.innerHTML = '<p>No lines containing the specified phrase were found.</p>';
+                        return;
+                    }
+
+                    // Create a downloadable file with the filtered content
+                    const filteredContent = filteredLines.join('\n');
+                    const blob = new Blob([filteredContent], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `filtered_log_${phraseToKeep.replace(/[^a-zA-Z0-9_-]/g, '_')}.txt`;
+                    link.textContent = `Download Filtered File (${filteredLines.length} lines)`;
+                    link.style.display = 'block';
+                    link.style.fontSize = '20px';
+
+                    // Display the filtered lines
+                    filteredResultsDiv.textContent = filteredLines.join('\n');
+
+                    output.innerHTML = ''; // Clear previous output
+                    output.appendChild(link);
+                    output.appendChild(filteredResultsDiv);
+                } catch (error) {
+                    alert('An error occurred during processing.');
+                    output.innerHTML = '';
+                }
+            };
+
+            reader.onerror = function() {
+                alert('An error occurred while reading the file.');
+                output.innerHTML = '';
+            };
+
+            reader.readAsText(file);
+        });
+    </script>
+</body>
+</html>

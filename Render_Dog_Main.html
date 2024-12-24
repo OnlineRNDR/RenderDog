@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Render Dog</title>
+	<link rel="stylesheet" href="css\styles.css">
+	<link rel="icon" href="Images\square.png" type="image/png">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   
+
+
+
+<script>
+	
+		
+        let logData = [];
+        let startDate = "";
+        let endDate = "";
+
+        let phraseCounts = {
+    "rndr client is starting...": 0,
+    "restarting during startup to switch to beta release": 0,
+    "restarting for a beta relaunch (A|B testing)": 0,
+    "parsed settings from rndr-config.ini": 0,
+    "sent render finished, job completed successfully": 0,
+    "job failed with config hash": 0,
+    "starting a new render job with config hash": 0,
+    "failing job, resource usage is too high": 0,
+    "client is aborting a render": 0,
+    "too many consecutive failures, restarting": 0,
+    "WARNING": 0,
+	"ERROR": 0,
+    "job was canceled": 0,
+	"Started c4d rendering": 0,
+    "octane gpu devices detected and enabled for render (r), denoise (d), tonemap (t):": 0,
+	"Loaded blend scene":0
+};
+
+let phraseLabels = {
+    "rndr client is starting...": "RNDR Client is Starting",
+    "restarting during startup to switch to beta release": "Restarting for Beta Release",
+    "restarting for a beta relaunch (A|B testing)": "Restarting Beta Relaunch (A/B Testing)",
+    "parsed settings from rndr-config.ini": "parsed settings from rndr-config.ini",
+    "sent render finished, job completed successfully": "sent render finished, job completed successfully",
+    "job failed with config hash": "job failed with config hash",
+    "starting a new render job with config hash": "starting a new render job with config hash",
+    "failing job, resource usage is too high": "failing job, resource usage is too high",
+    "client is aborting a render": "client is aborting a render",
+    "too many consecutive failures, restarting": "too many consecutive failures, restarting",
+    "WARNING:": "Warnings",
+	"ERROR:": "ERROR",
+    "job was canceled": "Job was Canceled",
+	"Started c4d rendering": "Started c4d Rendering",
+    "octane gpu devices detected and enabled for render (r), denoise (d), tonemap (t):": "Started Octane Rendering",
+	"Loaded blend scene": "Loaded Blender Scene"
+};
+
+// Define group 1 (General Logs)
+const group1 = [
+	"starting a new render job with config hash",
+	"sent render finished, job completed successfully",
+	"job failed with config hash",
+	"job was canceled",
+    "rndr client is starting...", 
+    "restarting during startup to switch to beta release", 
+    "restarting for a beta relaunch (A|B testing)", 
+    "parsed settings from rndr-config.ini",
+    "failing job, resource usage is too high",
+    "client is aborting a render",
+    "too many consecutive failures, restarting",
+    "WARNING", 
+    "ERROR"
+	
+];
+
+ 
+
+// Define group 2 (Render Engines)
+const group2 = [
+    
+    "Started c4d rendering",
+    "octane gpu devices detected and enabled for render (r), denoise (d), tonemap (t):",
+    "Loaded blend scene"
+];
+
+        let totalRenderTime = 0;
+        let maxRenderTime = 0;
+        let maxRenderLine = ""; // Variable to store the line with the largest render time
+        
+
+
+	let renderStartTimes = {}; // To track the start times of render jobs by config hash
+	let renderFailureTimes = []; // To store time differences
+
+// Function to extract the time from a log message
+function extractTimestamp(line) {
+    let timestampMatch = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+    return timestampMatch ? new Date(timestampMatch[1]) : null;
+}
+
+
+
+// Function to calculate time difference in minutes
+function calculateTimeDifference(startTime, endTime) {
+    const diffMs = endTime - startTime; // Difference in milliseconds
+    return diffMs / (1000 * 60); // Convert to minutes
+}
+
+
+   
+
+
+function filterLogData() {
+    // Reset counts and variables
+    for (let phrase in phraseCounts) {
+        phraseCounts[phrase] = 0;
+    }
+    totalRenderTime = 0;
+    maxRenderTime = 0;
+    maxRenderLine = ""; // Reset max render line
+
+    let lastKnownDate = null;
+    let resultText = "";
+
+    // Object to store daily render times
+    let dailyRenderTimes = {};
+
+   for (let line of logData) {
+    let logDateMatch = line.match(/\d{4}-\d{2}-\d{2}/);
+    if (logDateMatch) {
+        lastKnownDate = logDateMatch[0];
+    }
+
+    if (lastKnownDate && isWithinDateRange(lastKnownDate)) {
+        for (let phrase in phraseCounts) {
+            if (line.includes(phrase)) {
+                phraseCounts[phrase]++;
+            }
+        }
+
+        if (line.includes("sent render finished, job completed successfully")) {
+            let renderTimeMatch = line.match(/render time ([\d.]+) seconds/);
+            if (renderTimeMatch) {
+                let renderTime = parseFloat(renderTimeMatch[1]);
+                totalRenderTime += renderTime;
+                if (renderTime > maxRenderTime) {
+                    maxRenderTime = renderTime;
+                    maxRenderLine = line; // Capture the line for largest render time
+                }
+
+                // Store the render time by date
+                if (!dailyRenderTimes[lastKnownDate]) {
+                    dailyRenderTimes[lastKnownDate] = 0;
+                }
+                dailyRenderTimes[lastKnownDate] += renderTime;
+            }
+        }
+
+        // Handle the start of a new render job
+        if (line.includes("starting a new render job with config hash")) {
+            const timestamp = extractTimestamp(line);
+            const configHashMatch = line.match(/config hash: (\w+)/);
+            if (configHashMatch) {
+                const configHash = configHashMatch[1];
+                renderStartTimes[configHash] = timestamp; // Store start time by config hash
+            } else {
+                console.warn("No config hash found in line:", line); // Log the line if no match
+            }
+        }
+
+        // Handle a failed render job
+        if (line.includes("job failed with config hash")) {
+            const timestamp = extractTimestamp(line);
+            const configHashMatch = line.match(/config hash:\s*([^\s]+)/);
+            if (configHashMatch) {
+                const configHash = configHashMatch[1];
+
+                if (renderStartTimes[configHash]) {
+                    // Calculate time difference if we have a start time
+                    const startTime = renderStartTimes[configHash];
+                    const timeDiffMinutes = calculateTimeDifference(startTime, timestamp);
+
+                    renderFailureTimes.push({
+                        configHash: configHash,
+                        timeDiff: timeDiffMinutes
+                    });
+                }
+            } else {
+                console.warn("No config hash found in failed job line:", line); // Log the line if no match
+            }
+        }
+    }
+}
+
+
+    totalRenderTime = Math.round(totalRenderTime * 10) / 10;
+
+    // Calculate the total time in the selected date range
+    const startDateObj = startDate ? new Date(startDate) : null;
+    const endDateObj = endDate ? new Date(endDate) : new Date();
+    const totalDaysInRange = startDateObj && endDateObj
+        ? Math.max((endDateObj - startDateObj) / (1000 * 60 * 60 * 24) + 1, 0) // Inclusive of the end date
+        : 0;
+
+    const totalTimeInRange = totalDaysInRange * 24 * 60 * 60; // Convert days to seconds
+
+    // Calculate idle time
+    const idleTime = Math.max(totalTimeInRange - totalRenderTime, 0);
+  
+    // Calculate idle time percentage
+    let idlePercentage = ((idleTime / totalTimeInRange) * 100).toFixed(2);
+  
+    // Calculate render time percentage
+    let renderTimePercentage = ((totalRenderTime / totalTimeInRange) * 100).toFixed(2);
+
+
+ // Generate result text
+ // Generate result text
+ // Generate result text
+ // Generate result text
+		resultText += "=============================================\n";
+		resultText += "> Render Log Results:\n";
+		resultText += "=============================================\n";
+		resultText += "\n";
+		
+const formatDate = (date) => {
+  const dateObj = date ? new Date(date) : null;
+  return dateObj ? `${dateObj.toLocaleDateString()}` : 'No date selected';
+};
+
+resultText += `START DATE SELECTED: ${formatDate(startDate)} \n`;
+resultText += `END DATE SELECTED: ${formatDate(endDate)} \n`;
+resultText += `Total Days in Range: ${totalDaysInRange} days\n`;
+resultText += "======================\n> Stats and Information\n======================\n";
+
+	// Process group 1
+group1.forEach(phrase => {
+    const label = phraseLabels[phrase] || phrase;  // Default to the phrase itself if no label is found
+    const count = phraseCounts.hasOwnProperty(phrase) ? phraseCounts[phrase] : 0; // Ensure it's in phraseCounts
+    resultText += `${label}: ${count}\n`;
+});
+
+// Add separator before Render Engines section
+resultText += "======================\n> Render Engines\n======================\n";
+
+// Process group 2
+group2.forEach(phrase => {
+    const label = phraseLabels[phrase] || phrase;  // Default to the phrase itself if no label is found
+    const count = phraseCounts.hasOwnProperty(phrase) ? phraseCounts[phrase] : 0; // Ensure it's in phraseCounts
+    resultText += `${label}: ${count}\n`;
+});
+
+   
+
+	// Calculate the combined total for specific phrases
+    const combinedRenderCount =
+        phraseCounts["Started c4d rendering"] +
+        phraseCounts["octane gpu devices detected and enabled for render (r), denoise (d), tonemap (t):"] +
+        phraseCounts["Loaded blend scene"];
+
+    // Subtract combined total from successful renders
+    const difference =
+        phraseCounts["sent render finished, job completed successfully"] - combinedRenderCount;
+
+ 
+
+    // Display the calculated difference
+	resultText += `Combined Count - Total: ${combinedRenderCount}`;
+	resultText += `\nUnknown Engine - Total: ${difference}\n`;
+    // Display the number of days selected in the range
+    // Add a separator line
+    resultText += "======================\n";
+    
+    
+    let successfulRenders = phraseCounts["sent render finished, job completed successfully"];
+    if (successfulRenders > 0) {
+        let avgRenderTime = Math.round((totalRenderTime / successfulRenders) * 10) / 10;
+        resultText += `Average Render Time: ${avgRenderTime} seconds\n`;
+    } else {
+        resultText += `Average Render Time: N/A\n`;
+    }
+    // Add a separator line
+resultText += "======================\n";
+
+
+	
+// Add the total number of successful renders
+resultText += `Total Frames Rendered: ${successfulRenders}\n`;
+
+// Get the number of "starting a new render job" entries
+let startingNewJob = phraseCounts["starting a new render job with config hash"];
+
+// Calculate the number of failed renders
+let failedRenders = Math.abs(successfulRenders - startingNewJob);
+
+// Add the failed renders count
+resultText += `Failed Renders: ${failedRenders}\n`;
+
+// Calculate total renders
+let totalRenders = successfulRenders + failedRenders;
+
+// Calculate the percentage of successful renders
+let successfulRenderPercentage = (successfulRenders / totalRenders) * 100;
+
+// Calculate the percentage of failed renders
+let failedRenderPercentage = (failedRenders / totalRenders) * 100;
+
+// Add the percentages to the result
+resultText += `Successful Renders Percentage: ${successfulRenderPercentage.toFixed(2)}%\n`;
+resultText += `Failed Renders Percentage: ${failedRenderPercentage.toFixed(2)}%\n`;
+
+    // Add a separator line
+    resultText += "======================\n";
+    resultText += `Total Render Time: ${totalRenderTime} seconds\n`;
+    let totalMinutes = Math.round((totalRenderTime / 60) * 10) / 10;
+    resultText += `Total Render Time: ${totalMinutes} minutes\n`;
+
+    let totalHours = Math.round((totalRenderTime / 3600) * 10) / 10;
+    resultText += `Total Render Time: ${totalHours} hours\n`;
+    resultText += `Render Time Percentage: ${renderTimePercentage}%\n`; // Add the render time percentage
+    
+    // Add a separator line
+    resultText += "======================\n";    
+    resultText += `Idle Time: ${idleTime} seconds\n`;
+
+    let idleMinutes = Math.round((idleTime / 60) * 10) / 10;
+    resultText += `Idle Time: ${idleMinutes} minutes\n`;
+
+    let idleHours = Math.round((idleTime / 3600) * 10) / 10;
+    resultText += `Idle Time: ${idleHours} hours\n`;
+    resultText += `Idle Time Percentage: ${idlePercentage}%\n`;
+    // Add a separator line
+    resultText += "======================\n";
+	
+	
+
+    resultText += `Largest Render Time: ${maxRenderTime.toFixed(2)} seconds\n`;
+
+    let maxRenderTimeInMinutes = Math.round((maxRenderTime / 60) * 10) / 10;
+    let maxRenderTimeInHours = Math.round((maxRenderTime / 3600) * 10) / 10;
+
+    resultText += `Largest Render Time: ${maxRenderTimeInMinutes} minutes\n`;
+    resultText += `Largest Render Time: ${maxRenderTimeInHours} hours\n`;
+
+    if (maxRenderLine) {
+        resultText += `\nFull log lines for largest render time:\n`;
+        resultText += maxRenderLine + "\n";
+    }
+	
+
+
+
+// Now calculate the daily render times and update the line chart
+
+let labels = [];
+let data = [];
+
+// Sort the dates and populate the chart data
+for (let date in dailyRenderTimes) {
+    labels.push(date); // Add the date as a label
+    data.push((dailyRenderTimes[date] / 3600).toFixed(2)); // Convert seconds to hours and round to 2 decimal places
+}
+
+// Update the line chart with the new daily render data
+lineChartData.labels = labels;
+lineChartData.datasets[0].data = data;
+lineChart.update(); // Refresh the line chart
+
+// Update bar chart data
+barChartData.datasets[1].data[0] = (totalMinutes / 60).toFixed(2); // Convert Render Time to hours and round to 2 decimal places
+barChartData.datasets[2].data[0] = (idleMinutes / 60).toFixed(2);  // Convert Idle Time to hours and round to 2 decimal places
+barChart.update(); // Refresh the bar chart
+
+
+// Variables
+let jobStartTimes = {}; // Store start times for each config hash
+let failedRenderJobs = 0;
+let totalFailureTime = 0;
+let longestFailureTime = 0;
+let failedRendersList = [];
+let lastFrameStartTimes = {}; // Track the last frame start time for each config hash
+
+// Encapsulating the parsing logic in a function to avoid variable redeclaration
+(function() {
+    let lastKnownDate = null; // Limit scope to this function
+
+    for (let line of logData) {
+        let logDateMatch = line.match(/\d{4}-\d{2}-\d{2}/);
+        if (logDateMatch) {
+            lastKnownDate = logDateMatch[0];
+        }
+
+        // Ensure the log entry is within the selected date range
+        if (lastKnownDate && isWithinDateRange(lastKnownDate)) {
+            // Capture job start time and store it by config hash
+            if (line.includes("starting a new render job")) {
+                let startTimeMatch = line.match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/); // Extract timestamp
+                if (startTimeMatch) {
+                    let startTimeStr = startTimeMatch[0];
+                    let startTime = new Date(startTimeStr.replace(/-/g, "/")); // Replace - with / to ensure correct Date parsing
+                    let configHashMatch = line.match(/config hash: (\w+)/);
+                    if (configHashMatch) {
+                        let configHash = configHashMatch[1];
+                        // Update the last frame start time for each config hash
+                        lastFrameStartTimes[configHash] = startTime;
+                    }
+                }
+            }
+
+            // Capture job failure time and calculate the failure duration
+            if (line.includes("job failed with config hash")) {
+                let failTimeMatch = line.match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/); // Extract timestamp
+                if (failTimeMatch) {
+                    let failTimeStr = failTimeMatch[0];
+                    let failTime = new Date(failTimeStr.replace(/-/g, "/")); // Replace - with / to ensure correct Date parsing
+                    let configHashMatch = line.match(/config hash: (\w+)/);
+                    if (configHashMatch) {
+                        let configHash = configHashMatch[1];
+
+                        // If there's a start time for the failed job, calculate failure time
+                        if (lastFrameStartTimes[configHash]) {
+                            let startTime = lastFrameStartTimes[configHash];
+
+                            // Calculate failure duration in minutes (if the failure occurred after the last start time)
+                            let failureDurationMs = failTime - startTime; // Time difference in milliseconds
+                            let failureDurationMin = failureDurationMs / 1000 / 60; // Convert ms to minutes
+
+                            // Check if this is the longest failure time so far
+                            if (failureDurationMin > longestFailureTime) {
+                                longestFailureTime = failureDurationMin;
+                            }
+
+                            // Add to the total failure time
+                            totalFailureTime += failureDurationMin;
+
+                            // Increment failed render job count and capture the failed render line
+                            failedRenderJobs++;
+                            failedRendersList.push({ renderLine: line, failureTime: failureDurationMin });
+                        }
+                    }
+                }
+            }
+
+            // Capture successful render job and reset start time for config hash if needed
+            if (line.includes("sent render finished")) {
+                let configHashMatch = line.match(/config hash: (\w+)/);
+                if (configHashMatch) {
+                    let configHash = configHashMatch[1];
+                    // Reset the last frame start time after a successful render
+                    if (lastFrameStartTimes[configHash]) {
+                        delete lastFrameStartTimes[configHash];
+                    }
+                }
+            }
+        }
+    }
+})();
+
+
+
+// Add the total confirmed failed renders and list them in the resultText
+resultText += "======================\n";
+resultText += " > Failed Frames\n";
+resultText += "======================\n";
+
+resultText += `Failed Renders: ${failedRenders}\nTotal Confirmed Failed Renders in Range: ${failedRenderJobs}\nDifference (Not Accounted For): ${failedRenders - failedRenderJobs}\n`;
+
+resultText += "======================\n";
+// Display the total failure time in minutes
+resultText += `Total Failure Time: ${totalFailureTime.toFixed(2)} minutes\n`;
+
+
+// Display the longest and shortest failure times
+if (failedRenderJobs > 0) {
+    let shortestFailureTime = Math.min(...failedRendersList.map(failedRender => failedRender.failureTime));
+    resultText += `Longest Failure Time: ${longestFailureTime.toFixed(2)} minutes\n`;
+    resultText += `Shortest Failure Time: ${shortestFailureTime.toFixed(2)} minutes\n`;
+} else {
+    resultText += "No failed renders to calculate longest or shortest times.\n";
+}
+
+// Display the average failure time if there are any failed renders
+if (failedRenderJobs > 0) {
+    let averageFailureTime = totalFailureTime / failedRenderJobs;
+    resultText += `Average Failure Time: ${averageFailureTime.toFixed(2)} minutes\n`;
+} else {
+    resultText += "No failed renders to calculate average time.\n";
+}
+
+resultText += "======================\n";
+
+// If there are failed renders, list them with failure time details
+if (failedRenderJobs > 0) {
+    failedRendersList.forEach((failedRender) => {
+        const configHash = failedRender.renderLine.match(/config hash: (\w+)/)[1];
+        resultText += `Job Fail: Hash: ${configHash} Time: ${failedRender.failureTime.toFixed(2)} minutes\n`;
+    });
+} else {
+    resultText += "No confirmed failed renders in the selected date range.\n";
+}
+
+resultText += "======================\n";
+resultText += "END OF RENDER LOG\n";
+resultText += "======================\n";
+
+//////////////////////////////////////
+//END OF LOG CONTAINER INFORMATIONS/// 
+//////////////////////////////////////
+
+// Display results
+    document.getElementById('resultContainer').innerHTML = `<pre>${resultText}</pre>`;
+ 
+
+
+
+
+		
+	}
+
+		
+
+        function isWithinDateRange(logDate) {
+            let logDateObj = new Date(logDate);
+            let startDateObj = startDate ? new Date(startDate) : null;
+            let endDateObj = endDate ? new Date(endDate) : null;
+
+            if (startDateObj && logDateObj < startDateObj) {
+                return false;
+            }
+            if (endDateObj && logDateObj > endDateObj) {
+                return false;
+            }
+            return true;
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                logData = e.target.result.split("\n");
+                filterLogData();
+            };
+
+            reader.readAsText(file);
+        }
+
+        function setStartDate(date) {
+            startDate = date;
+            filterLogData();
+        }
+
+        function setEndDate(date) {
+            endDate = date;
+            filterLogData();
+        }
+
+  // Function to convert time based on selected type
+function convertTime() {
+    const timeInput = document.getElementById('timeInput').value;
+    const timeType = document.querySelector('input[name="timeType"]:checked').value;
+
+    if (timeType === 'seconds') {
+        // Convert seconds to minutes and hours
+        const totalMinutes = Math.floor(timeInput / 60);
+        const totalHours = Math.floor(timeInput / 3600);
+        const remainingMinutes = Math.floor((timeInput % 3600) / 60);
+
+        document.getElementById('minutesOutput').textContent = totalMinutes;
+        document.getElementById('hoursOutput').textContent = `${totalHours} hours and ${remainingMinutes} minutes`;
+    } else if (timeType === 'minutes') {
+        // Convert minutes to hours
+        const totalHours = Math.floor(timeInput / 60);
+        const remainingMinutes = timeInput % 60;
+
+        document.getElementById('minutesOutput').textContent = timeInput;
+        document.getElementById('hoursOutput').textContent = `${totalHours} hours and ${remainingMinutes} minutes`;
+    }
+}
+
+
+	
+       window.onload = function() {
+    // Set dark mode as default
+    document.body.classList.add('dark-theme');
+
+    // Ensure the DOM elements exist before adding event listeners
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileUpload);
+    } else {
+        console.warn("fileInput element not found");
+    }
+
+
+
+
+    const startDateInput = document.getElementById('startDate');
+    if (startDateInput) {
+        startDateInput.addEventListener('change', (event) => setStartDate(event.target.value));
+    } else {
+        console.warn("startDate element not found");
+    }
+
+    const endDateInput = document.getElementById('endDate');
+    if (endDateInput) {
+        endDateInput.addEventListener('change', (event) => setEndDate(event.target.value));
+    } else {
+        console.warn("endDate element not found");
+    }
+};
+
+
+
+</script>
+	
+	
+	
+</head>
+<body>
+
+    
+    <!-- Main Table Layout -->
+<table>
+    <tr>
+        <!-- Left Column (Logo, File Input, and Date Pickers) -->
+       <td id="leftColumn">
+    <!-- Container for Logo and File Input -->
+    <div id="logoContainer" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+        <!-- Logo Image -->
+        <img src="images\logo2.png" alt="RNDR Logo" id="logo" style="">
+		
+    </div>
+
+    <!-- File Upload and Save Buttons -->
+    <div id="buttonContainer" style="display: flex; align-items: center; gap: 10px; margin-top: 20px;">
+        <!-- File Upload Button -->
+        <label id="fileInputLabel" for="fileInput" style="cursor: pointer;">
+            <span>Load Rndr Log</span>
+        </label>
+        <input type="file" id="fileInput" style="display: none;" />
+
+        <!-- Save Button -->
+        <button id="saveButton" class="save-button" style="cursor: pointer;">Save Results</button>
+          
+			  
+ <!-- Storelast and Calendar hidden in CSS using a crappy simulate button to activate crappy code -->
+  <button id="storeLastRangeButton">Store Dates</button>
+  <button id="restoreCalendarButton">Restore Calendar</button>
+  <button id="exportContentButton">Export Report</button>
+  <button id="exportWeeklyButton">Export Weekly</button>
+
+
+
+
+        
+    </div>
+
+    <!-- Date Filters -->
+	 <div id="dateFilters">
+    <!-- Date inputs on the left -->
+    <div id="dateInputs">
+      <span>Start:</span>
+      <input type="date" id="startDate">
+      <span >End:</span>
+      <input type="date" id="endDate">
+    </div>
+
+    <!-- Buttons on the right -->
+    <div id="buttonGroup">
+      <button id="moveLeft">←</button>
+      <button id="moveRight">→</button>
+      <button id="saveDates">💾</button>
+      <button id="returnDates">⤴</button>
+	   
+    <button id="syncEndToStart">🔶</button>
+	<button id="syncStartToEnd">🔷</button>
+    </div>
+  </div>
+
+    <!-- Results Container -->
+    <div id="resultContainer" style="margin-top: 20px;">
+    <!-- Selectable Results will be displayed here -->
+    </div>
+</td>
+
+
+
+<td id="middleColumn">
+
+
+    <div class="headers">
+    <!-- Title for the bar chart -->
+    <h3>Render (D)Log - Quick Stats</h3>
+	</div>
+    <div id="statsOverviewContainer"></div>
+	<div class="headers">
+    <!-- Title for the bar chart -->
+    <h3>Render Time Vs Idle Time (Hours)</h3>
+	</div>
+
+    <!-- Container for the bar chart -->
+    <div class="bar-charts-container">
+        <!-- Bar Chart Canvas -->
+        <canvas id="barChart" ></canvas>
+		
+		
+    </div>
+
+	<div class="headers">
+    <!-- Title for the line chart -->
+    <h3>Render Over Time</h3>
+	</div>
+	
+	
+    <!-- Container for the line chart -->
+    <div class="line-chart-container">
+        <!-- Line Chart Canvas -->
+        <canvas id="lineChart"></canvas>
+    </div>
+	
+	<div class="pie-charts-container">
+        <!-- Pie Chart Canvas -->
+		<div class="headers">
+		<h3>Render Success </h3>
+		</div>
+		<div id="chartContainer" style="max-width: 400px; margin: 20px auto;">
+    <canvas id="rendersPieChart"></canvas>
+</div>
+        
+	</div>
+   
+
+	
+
+         
+<!-- Right Column (Seconds Convert and Price Calc) -->
+<td id="rightColumn">
+
+	<div class="logo-container">
+			<div class="button-container">
+				<!-- Label styled as a button -->
+	
+  <button id="completionButton">Waiting Report</button>
+  <!-- Button for Weekly Reports (Multiple Files) -->
+	<button id="weeklyStatusButton">Waiting Weekly</button>
+
+			</div>
+			<a href="html/overview.html" target="_blank">
+			<img src="images/logo4.png" alt="Logo" class="banner">
+			</a>
+
+	</div>
+				<div class="container">
+ 
+</div>
+		<div id="progress-container" style="display: none; width: auto; background: #000; border: 1px solid #ccc; padding: 5px;">
+		<div id="progress-bar" style="width: 0; height: 20px; background: #4caf50;"></div>
+		<div id="progress-text" style="text-align: center; margin-top: 5px;">Progress: 0%</div>
+		</div>
+
+		<div id="debug-console-container" style="width: 100%; margin-top: 10px;">
+		  <h3>
+			<div style="display: flex; align-items: center; justify-content: space-between;">
+			  <div style="display: flex; align-items: center;">
+				
+				<span>Debug Console</span>
+			  </div>
+			  <button onclick="toggleLogData()" style="background-color: transparent; border: none; color: #fff; cursor: pointer;">
+				&#x25BC; <!-- Downwards triangle symbol for toggle -->
+			  </button>
+		</div>
+			</h3>
+
+
+ 
+</div>
+
+<!-- Log Data Section -->
+<div id="LOGDATA_CONTAINER" style="display: flex; flex-direction: column; height: 300px; border: 1px solid #ccc; background-color: #000; color: #fff; margin-top: 20px;">
+  <!-- Log Data Content -->
+  <div id="LOGDATA" style="flex-grow: 1; overflow-y: auto; padding: 25px;">
+    <!-- Your log content will appear here -->
+  </div>
+
+    <button onclick="clearLogDataContainer()" style="background-color: #000; color: white; padding: 8px 20px; border: none;cursor: pointer; font-size: 14px;">
+      Clear Log Window
+    </button>
+  </div>
+</div>
+<br>
+		<div id="headerToolboxContainer" style="border: 1px solid #ccc; padding: 10px; width: auto; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);">
+		  <!-- Header Section -->
+		  <div style="display: flex; align-items: center; margin-bottom: 10px;">
+			<!-- Icon -->
+			<img src="images\toolbox_small.png" alt="Icon" style="width: 60px; height: 60px; margin-right: 10px;">
+
+			<!-- Header Text -->
+			<h2 style="margin: 0; font-size: 18px; color: #fff;">Render Log Toolbox</h2>
+		  </div>
+
+
+			<!-- Toolbox Section -->
+			<div style="display: flex; width: 100%; gap: 10px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);">
+			  <a href="html\overview.html" target="_blank" style="flex-grow: 1; text-align: center; background-color: #007BFF; color: white; padding: 8px 0; text-decoration: none;cursor: pointer; font-size: 14px;">
+				Reports
+			  </a>
+			  <a href="html\splitter.html" target="_blank" style="flex-grow: 1; text-align: center; background-color: #e8a72b; color: white; padding: 8px 0; text-decoration: none;cursor: pointer; font-size: 14px;">
+				Log Split
+			  </a>
+			  <a href="html\wizard.html" target="_blank" style="flex-grow: 1; text-align: center; background-color: #30a610; color: white; padding: 8px 0; text-decoration: none; cursor: pointer; font-size: 14px;">
+				Wizard
+			  </a>
+			  <a href="html\weekly.html" target="_blank" style="flex-grow: 1; text-align: center; background-color: #1076a6; color: white; padding: 8px 0; text-decoration: none; cursor: pointer; font-size: 14px;">
+				Weekly Tools
+			  </a>
+			</div>
+
+		</div>
+
+
+<br>
+
+
+
+
+               
+
+   <!-- Frame Price Calculator -->
+<div id="priceCalc" style="margin-top: 20px; padding-top: 10px; max-width: 400px; margin-left: auto; margin-right: auto; font-family: Arial, sans-serif;">
+
+   
+     <strong>FRAME COST CALCULATOR $RENDER:</strong> <br><br><br>
+    <div style="display: flex; flex-direction: column; gap: 15px;">
+        <label>
+            <span style="font-weight: bold;">Render Received:</span>
+            <input type="number" id="renderReceived" placeholder="Enter Amount" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;">
+        </label>
+        
+        <label>
+            <span style="font-weight: bold;">Render Token Price:</span><a href="https://solscan.io/token/rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof" target="_blank" style="color: #fcba03; text-decoration: none; float: right;">
+    View Token on Solscan
+</a>
+
+   
+            <input type="number" id="renderTokenPrice" placeholder="Enter Token Price" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;">
+        </label>
+        
+        <label>
+            <span style="font-weight: bold;">Total Frames Rendered: (Optional)</span>
+            <input type="number" id="totalFramedRender" placeholder="Enter Total Frames" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;">
+        </label>
+        
+        <label>
+            <span style="font-weight: bold;">Total Hours Rendered:</span>
+            <input type="number" id="totalHoursRendering" placeholder="Enter Total Hours" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;">
+        </label>
+    </div>
+    
+    <!-- Calculate Button -->
+    <div style="text-align: center; margin-top: 20px;">
+        <button onclick="calculateFramePrice()" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; cursor: pointer; font-size: 14px;">
+            Calculate
+        </button>
+    </div>
+	
+    
+    <!-- Display Results -->
+    <div style="margin-top: 20px; font-size: 16px;">
+        <strong>Total $RENDER:</strong> <span id="totalValue" style="color: #ecf0f1;"></span><br><br>
+        <strong>Average Frame Cost ($):</strong> <span id="avgFrameCost" style="color: #ecf0f1;"></span><br><br>
+        <strong>Average Price per Hour ($):</strong> <span id="avgPricePerHour" style="color: ecf0f1;"></span>
+    </div>
+	     </div>
+
+		
+
+		<div id="secondsConverter">
+			
+
+			 <h3>Time Convert</h3>
+
+			<!-- Input for Time -->
+			<input type="number" id="timeInput" oninput="convertTime()">
+			<br><br>
+
+			<!-- Toggle for Seconds or Minutes -->
+			<label>
+				<input type="radio" name="timeType" value="seconds" checked onchange="convertTime()"> Seconds
+			</label>
+			<label>
+				<input type="radio" name="timeType" value="minutes" onchange="convertTime()"> Minutes
+			</label>
+			<br><br>
+
+			<!-- Output for Minutes -->
+			<div style="text-align: left;">
+				Total Minutes: <span id="minutesOutput"></span>
+			</div>
+			<br>
+
+			<!-- Output for Hours -->
+			<div style="text-align: left;">
+				Total Hours: <span id="hoursOutput"></span>
+			</div>
+		</div>
+
+
+        <div id="secondsConverter">
+<div>
+	<h3>Availability Rewards</h3>
+    <label for="availabilityReward">Availability Reward Recived:</label>
+    <input type="number" id="availabilityReward" placeholder="Enter Availability Reward">
+
+    <!-- <input type="number" id="tokenPrice" placeholder="Enter Token Price"> -->
+
+    <label for="GPUCount">Number of GPUs:</label>
+    <input type="number" id="GPUCount" placeholder="Enter Number of GPUs">
+
+    <label for="idletime">Idle / Gpu Availability Hours (Optional):</label>
+    <input type="number" id="idletime" placeholder="Enter Idle Hours">
+
+    <button class="calculate-reward-btn" onclick="calculateReward()">Calculate Reward</button><br>
+
+</div>
+
+<!-- Results Section -->
+<div class="results">
+	<br>
+    <div>Availability Payout: <span id="avilOutput">0</span></div><br>
+    <!-- <div>Total Render: <span id="totalRenderOutput">0</span></div> -->
+    <div>Reward Per GPU: <span id="rewardPerGPUOutput">0</span></div>
+	<div>Reward Per GPU A Day  (Week) : <span id="rewardPerWeekOutput">0</span></div>
+    <div>Price Per GPU Per Hour: <span id="pricePerGPUOutput">0</span></div>
+</div>
+</div>
+
+
+
+
+
+ 
+
+
+
+
+</td>
+</table>
+<footer>
+    <a href="html/3310.html" style="float: right;margin-left:10px; color: white; text-decoration: none;">&#9633</a>
+	<a href="html/pong.html" style="float: right; color: white; text-decoration: none;">&#x25A0</a>
+</footer>
+
+</body>
+<script>
+
+
+	// Function to save the content of the resultContainer as a .txt file
+	function saveResultContainer() {
+		const resultContainer = document.getElementById('resultContainer');
+		
+		// Get the content of the resultContainer
+		const resultText = resultContainer.innerText;
+		
+		// Ensure only the most recent content is saved (optional reset)
+		if (!resultContainer.savedContent || resultContainer.savedContent !== resultText) {
+			resultContainer.savedContent = resultText; // Store the content to avoid duplicates
+			const blob = new Blob([resultText], { type: 'text/plain' });
+			const link = document.createElement('a');
+			link.href = URL.createObjectURL(blob);
+			link.download = 'render_log.txt'; // You can change the filename here
+			link.click();
+		}
+	}
+
+	// Attach the save functionality to the HTML button with id 'saveButton'
+	document.getElementById('saveButton').addEventListener('click', saveResultContainer);
+	
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const fileInput = document.getElementById('fileInput');
+    const startDateInput = document.querySelector('#startDate');
+    const endDateInput = document.querySelector('#endDate');
+    const storeLastRangeButton = document.getElementById('storeLastRangeButton');
+    const restoreCalendarButton = document.getElementById('restoreCalendarButton');
+    const exportContentButton = document.getElementById('exportContentButton');
+    const exportWeeklyButton = document.getElementById('exportWeeklyButton');
+    const resultContainer = document.getElementById('resultContainer');
+
+    const storedDatesLog = [];
+    let explicitStoredEntry = null;
+
+
+    if (storeLastRangeButton) {
+        storeLastRangeButton.addEventListener('click', storeExplicitLastRange);
+
+           
+    };
+
+    if (restoreCalendarButton) {
+        restoreCalendarButton.addEventListener('click', restoreCalendar);
+    }
+
+    if (exportContentButton) {
+        exportContentButton.addEventListener('click', exportCapturedContentInBackground);
+    } else {
+        console.warn("exportContentButton element not found");
+    }
+
+    if (exportWeeklyButton) {
+        exportWeeklyButton.addEventListener('click', exportWeeklyReports);
+    } else {
+        console.warn("exportWeeklyButton element not found");
+    }
+
+    function saveStoredDates(source, startDate, endDate) {
+        const dateEntry = {
+            source,
+            startDate: formatDate(startDate),
+            endDate: formatDate(endDate),
+            timestamp: new Date().toISOString(),
+        };
+        storedDatesLog.push(dateEntry);
+        console.log("New Date Entry Logged:", dateEntry);
+    }
+
+    function storeExplicitLastRange() {
+        if (startDateInput.value && endDateInput.value) {
+            explicitStoredEntry = {
+                source: 'Manual Input (Explicitly Stored)',
+                startDate: formatDate(startDateInput.value),
+                endDate: formatDate(endDateInput.value),
+                timestamp: new Date().toISOString(),
+            };
+            storedDatesLog.push(explicitStoredEntry);
+            console.log("Date Saved:", explicitStoredEntry);
+        } else {
+            console.warn("Both start and end dates must be selected to store the range.");
+        }
+    }
+
+
+    function restoreCalendar() {
+        if (explicitStoredEntry) {
+            startDateInput.value = explicitStoredEntry.startDate;
+            endDateInput.value = explicitStoredEntry.endDate;
+
+            console.log("Restoring Last Explicitly Stored Entry:");
+            console.log(`Start Date: ${explicitStoredEntry.startDate}`);
+            console.log(`End Date: ${explicitStoredEntry.endDate}`);
+
+            setStartDate(explicitStoredEntry.startDate);
+            setEndDate(explicitStoredEntry.endDate);
+            forceUIRefresh();
+        } else {
+            console.log("No explicitly stored entry to restore.");
+        }
+    }
+
+    function exportCapturedContentInBackground() {
+        if (explicitStoredEntry) {
+            const { startDate, endDate } = explicitStoredEntry;
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            let resultText = '';
+            const originalStartDate = startDateInput.value;
+            const originalEndDate = endDateInput.value;
+
+            const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+            let processedDays = 0;
+
+            const progressContainer = document.getElementById("progress-container");
+            const progressBar = document.getElementById("progress-bar");
+            const progressText = document.getElementById("progress-text");
+
+            progressContainer.style.display = "block";
+
+            function processNextDate(currentDate) {
+                if (currentDate <= end) {
+                    const formattedDate = formatDate(currentDate);
+
+                    console.log(`Processing Date: ${formattedDate}`);
+                    startDateInput.value = formattedDate;
+                    endDateInput.value = formattedDate;
+
+                    setStartDate(formattedDate);
+                    setEndDate(formattedDate);
+                    forceUIRefresh();
+
+                    resultText += resultContainer.innerText + '\n';
+
+                    processedDays++;
+                    const progressPercent = Math.round((processedDays / totalDays) * 100);
+                    progressBar.style.width = `${progressPercent}%`;
+                    progressText.innerText = `Progress: ${progressPercent}%`;
+
+                    currentDate.setDate(currentDate.getDate() + 1);
+                    setTimeout(() => processNextDate(currentDate), 0);
+                } else {
+                    const fileName = `Render_Dog_Days_Report_${formatDate(new Date(startDate))}_to_${formatDate(new Date(endDate))}.txt`;
+                    exportCapturedContent(resultText, fileName);
+
+                    startDateInput.value = originalStartDate;
+                    endDateInput.value = originalEndDate;
+
+                    setStartDate(originalStartDate);
+                    setEndDate(originalEndDate);
+                    forceUIRefresh();
+
+                    console.log("Dates reverted to original start and end values.");
+                    console.log("Export completed.");
+
+                    progressContainer.style.display = "none";
+					showCompletionButton(resultText);
+
+                    
+                }
+            }
+
+            processNextDate(new Date(startDate));
+        } else {
+            console.warn("No explicitly stored date range to export.");
+        }
+    }
+
+    function exportWeeklyReports() {
+    if (explicitStoredEntry) {
+        const { startDate, endDate } = explicitStoredEntry;
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        let currentStartDate = new Date(start);
+        const originalStartDate = startDateInput.value;
+        const originalEndDate = endDateInput.value;
+		
+        const progressContainer = document.getElementById("progress-container");
+        const progressBar = document.getElementById("progress-bar");
+        const progressText = document.getElementById("progress-text");
+
+        progressContainer.style.display = "block";
+        let resultText = '';
+        let weeklyReportCount = 0;
+
+        const exportedFiles = []; // Array to store exported file details
+
+        function processNextWeek() {
+            if (currentStartDate <= end) {
+                const weekStartDate = new Date(currentStartDate);
+                const weekEndDate = new Date(currentStartDate);
+                weekEndDate.setDate(weekEndDate.getDate() + 6);
+
+                if (weekEndDate > end) {
+                    weekEndDate.setTime(end.getTime());
+                }
+
+                const formattedStartDate = formatDate(weekStartDate);
+                const formattedEndDate = formatDate(weekEndDate);
+
+                console.log(`Processing Weekly Report: ${formattedStartDate} - ${formattedEndDate}`);
+                startDateInput.value = formattedStartDate;
+                endDateInput.value = formattedEndDate;
+
+                setStartDate(formattedStartDate);
+                setEndDate(formattedEndDate);
+                forceUIRefresh();
+
+                resultText += `Weekly Report (${formattedStartDate} to ${formattedEndDate}):\n`;
+                resultText += resultContainer.innerText + '\n\n';
+
+                const fileName = `Weekly_Report_${formattedStartDate}_to_${formattedEndDate}.txt`;
+
+                setTimeout(() => {
+                    const exportedFile = exportCapturedContent(resultContainer.innerText, fileName);
+                    exportedFiles.push(exportedFile); // Track the exported file
+
+                    weeklyReportCount++;
+                    const progressPercent = Math.round((weeklyReportCount / Math.ceil((end - start) / (7 * 24 * 60 * 60 * 1000))) * 100);
+                    progressBar.style.width = `${progressPercent}%`;
+                    progressText.innerText = `Progress: ${progressPercent}%`;
+
+                    currentStartDate.setDate(currentStartDate.getDate() + 7);
+                    processNextWeek();
+                }, 500); // Delay each download by 0.5 seconds
+            } else {
+                // Restore original start and end dates
+                startDateInput.value = originalStartDate;
+                endDateInput.value = originalEndDate;
+
+                setStartDate(originalStartDate);
+                setEndDate(originalEndDate);
+                forceUIRefresh();
+
+                console.log("Weekly reports export completed.");
+                progressContainer.style.display = "none";
+
+                // Trigger the weekly status button with exported files
+                showWeeklyStatusButton(exportedFiles);
+            }
+        }
+
+        processNextWeek();
+    } else {
+        console.warn("No explicitly stored date range to export weekly reports.");
+    }
+}
+
+            
+
+    function forceUIRefresh() {
+        console.log("Force UI refresh triggered.");
+        filterLogData();
+    }
+
+    function formatDate(date) {
+        const d = new Date(date);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+
+	
+	function exportCapturedContent(resultText, fileName) {
+    const blob = new Blob([resultText], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+
+    console.log(`Captured content exported to file: ${fileName}`);
+    return fileName; // Return the filename
+}
+
+
+function showCompletionButton(resultText) {
+    const button = document.getElementById('completionButton');
+    if (button) {
+        button.style.display = 'inline-flex';
+        button.style.backgroundColor = '#4CAF50';
+        button.style.color = '#fff';
+        button.textContent = 'Open Report';
+
+        // Attach a click event listener
+        button.addEventListener('click', () => {
+            // Save the result text to localStorage
+            localStorage.setItem('uploadedFileContent', resultText);
+
+            // Open the overview window
+            const overviewWindow = window.open('html/overview.html', '_blank');
+            if (!overviewWindow) {
+                alert("Unable to open overview.html. Please check popup blockers.");
+                return;
+            }
+
+            // Revert the button to its initial state
+            setTimeout(() => {
+                button.style.backgroundColor = ''; // Reset to default background color
+                button.style.color = ''; // Reset to default text color
+                button.textContent = 'Waiting Report'; // Reset button text
+            }, 500); // Optional delay for visual feedback
+        }, { once: true }); // Ensure the event listener runs only once
+    } else {
+        console.warn("Completion button not found in the DOM.");
+    }
+}
+
+	function showWeeklyStatusButton(exportedFiles) {
+    const button = document.getElementById('weeklyStatusButton');
+    if (button) {
+        button.style.display = 'inline-flex';
+        button.style.backgroundColor = '#4CAF50';
+        button.style.color = '#fff';
+        button.textContent = 'Goto Weekly';
+
+        // Attach a click event listener
+        button.addEventListener(
+            'click',
+            () => {
+                // Save the exported files to localStorage
+                localStorage.setItem('exportedWeeklyFiles', JSON.stringify(exportedFiles));
+
+                // Open the weekly.html page
+                const weeklyWindow = window.open('html/weekly.html', '_blank');
+                if (!weeklyWindow) {
+                    alert('Unable to open weekly.html. Please check popup blockers.');
+                    return;
+                }
+
+                // Revert the button to its initial state
+                setTimeout(() => {
+                    button.style.backgroundColor = ''; // Reset to default background color
+                    button.style.color = ''; // Reset to default text color
+                    button.textContent = 'Waiting Weekly'; // Reset button text
+                }, 500); // Optional delay for visual feedback
+            },
+            { once: true } // Ensure the event listener runs only once
+        );
+    } else {
+        console.warn('weeklyStatusButton not found in the DOM.');
+    }
+}
+
+
+
+    startDateInput.addEventListener('change', () => {
+        if (startDateInput.value && endDateInput.value) {
+            const selectedStartDate = new Date(startDateInput.value);
+            const selectedEndDate = new Date(endDateInput.value);
+            saveStoredDates('Manual Input', selectedStartDate, selectedEndDate);
+        }
+    });
+
+    endDateInput.addEventListener('change', () => {
+        if (startDateInput.value && endDateInput.value) {
+            const selectedStartDate = new Date(startDateInput.value);
+            const selectedEndDate = new Date(endDateInput.value);
+            saveStoredDates('Manual Input', selectedStartDate, selectedEndDate);
+        }
+    });
+});
+</script>
+
+
+
+
+<script>
+		
+		// Function to calculate and display the frame price and average price per hour
+	function calculateFramePrice() {
+    const renderReceived = parseFloat(document.getElementById('renderReceived').value);
+    const renderTokenPrice = parseFloat(document.getElementById('renderTokenPrice').value);
+    const totalFramesRendered = parseFloat(document.getElementById('totalFramedRender').value);
+    const totalHoursRendered = parseFloat(document.getElementById('totalHoursRendering').value);
+
+    // Ensure all input values are valid, but allow totalFramesRendered to be optional
+    if (isNaN(renderReceived) || isNaN(renderTokenPrice) || isNaN(totalHoursRendered) || renderReceived <= 0 || renderTokenPrice <= 0 || totalHoursRendered <= 0) {
+        alert("Please enter valid values for all required fields.");
+        return;
+    }
+
+    // Calculate total value (render received * render token price)
+    const totalValue = renderReceived * renderTokenPrice;
+
+    // Initialize avgFrameCost if totalFramesRendered is provided
+    let avgFrameCost = 0;
+    if (!isNaN(totalFramesRendered) && totalFramesRendered > 0) {
+        avgFrameCost = totalValue / totalFramesRendered;
+    }
+
+    // Calculate average price per hour
+    const avgPricePerHour = totalValue / totalHoursRendered;
+
+    // Update the HTML elements to display the results
+    document.getElementById('totalValue').textContent = totalValue.toFixed(2);
+    
+    // Only update avgFrameCost if totalFramesRendered is provided
+    if (avgFrameCost > 0) {
+        document.getElementById('avgFrameCost').textContent = avgFrameCost.toFixed(2);
+    } else {
+        document.getElementById('avgFrameCost').textContent = 'N/A';  // Or leave it empty, depending on your preference
+    }
+
+    document.getElementById('avgPricePerHour').textContent = avgPricePerHour.toFixed(2);
+}
+</script>
+
+<script>
+// Select the DOM elements
+const startDateInput = document.querySelector('#startDate');
+const endDateInput = document.querySelector('#endDate');
+const moveLeftButton = document.querySelector('#moveLeft');
+const moveRightButton = document.querySelector('#moveRight');
+const saveDatesButton = document.querySelector('#saveDates');
+const returnDatesButton = document.querySelector('#returnDates');
+const syncStartToEndButton = document.querySelector('#syncStartToEnd');
+const syncEndToStartButton = document.querySelector('#syncEndToStart');
+
+// Variables to store saved dates and sync state
+let savedStartDate = null;
+let savedEndDate = null;
+let isSynced = false; // Tracks if the start and end dates are synced
+
+// Helper function to adjust the date and trigger change event
+function adjustDate(input, days) {
+    const currentDate = new Date(input.value || Date.now()); // Use input value or today if empty
+
+    // Reset time to avoid DST issues
+    currentDate.setHours(12, 0, 0, 0); // Set to noon to prevent DST edge cases
+
+    // Adjust the date by the specified number of days
+    currentDate.setDate(currentDate.getDate() + days);
+
+    // Format the date back to YYYY-MM-DD and update the input field
+    input.value = currentDate.toISOString().split('T')[0];
+
+    // Trigger change event to refresh UI bindings
+    input.dispatchEvent(new Event('change'));
+}
+
+// Event listeners for navigation buttons
+moveLeftButton.addEventListener('click', () => {
+    adjustDate(startDateInput, -1); // Move start date 1 day back
+    if (isSynced) {
+        adjustDate(endDateInput, -1); // Move end date 1 day back only if synced
+    }
+});
+
+moveRightButton.addEventListener('click', () => {
+    adjustDate(startDateInput, 1); // Move start date 1 day forward
+    if (isSynced) {
+        adjustDate(endDateInput, 1); // Move end date 1 day forward only if synced
+    }
+});
+
+// Event listener for syncing start date to end date
+syncStartToEndButton.addEventListener('click', () => {
+    startDateInput.value = endDateInput.value;
+    isSynced = true;
+
+    // Trigger change events to refresh UI bindings
+    startDateInput.dispatchEvent(new Event('change'));
+    console.log(`Start Date synced to End Date: ${endDateInput.value}`);
+    alert('Start Date synced to End Date!');
+});
+
+// Event listener for syncing end date to start date
+syncEndToStartButton.addEventListener('click', () => {
+    endDateInput.value = startDateInput.value;
+    isSynced = true;
+
+    // Trigger change events to refresh UI bindings
+    endDateInput.dispatchEvent(new Event('change'));
+    console.log(`End Date synced to Start Date: ${startDateInput.value}`);
+    alert('End Date synced to Start Date!');
+});
+
+// Save the current start and end dates
+saveDatesButton.addEventListener('click', () => {
+    savedStartDate = startDateInput.value;
+    savedEndDate = endDateInput.value;
+
+    console.log(`Dates saved: Start Date = ${savedStartDate}, End Date = ${savedEndDate}`);
+    alert('Dates have been saved!');
+});
+
+// Return the saved dates to the input fields
+returnDatesButton.addEventListener('click', () => {
+    if (savedStartDate && savedEndDate) {
+        startDateInput.value = savedStartDate;
+        endDateInput.value = savedEndDate;
+
+        // Trigger change events to refresh UI bindings
+        startDateInput.dispatchEvent(new Event('change'));
+        endDateInput.dispatchEvent(new Event('change'));
+
+        console.log(`Dates restored: Start Date = ${savedStartDate}, End Date = ${savedEndDate}`);
+        alert('Saved dates have been restored!');
+    } else {
+        alert('No dates have been saved yet!');
+    }
+});
+
+// Optional: Initial trigger for UI binding if needed
+startDateInput.dispatchEvent(new Event('change'));
+endDateInput.dispatchEvent(new Event('change'));
+
+
+</script>
+
+
+
+<script>
+
+
+
+// Bar Chart Data with the new Total Days label
+const barChartData = {
+    labels: ['Total'], // Only one label 'Total'
+    datasets: [
+        {
+            label: '', // Leave label empty
+            data: [7], // Example value for Total Days (7 days)
+            backgroundColor: '#34495e', // Background color for Total Days
+            hidden: true, // This hides the Total Days dataset initially
+            skipLegend: true // Custom property to filter it out from the legend
+        },
+        {
+            label: 'Render Time',
+            data: [24], // Example data for Render Time (in minutes)
+            backgroundColor: '#b81812',
+        },
+        {
+            label: 'Idle Time',
+            data: [10], // Example data for Idle Time (in minutes)
+            backgroundColor: '#6de83c',
+        }
+    ]
+};
+ 
+// Bar Chart Configuration
+const barChartConfig = {
+    type: 'bar',
+    data: barChartData,
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: {
+                    filter: function (legendItem, chartData) {
+                        // Exclude datasets with skipLegend: true from the legend
+                        return !chartData.datasets[legendItem.datasetIndex].skipLegend;
+                    },
+                    color: 'white' // Set legend font color to white
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function (tooltipItem) {
+                        return `${tooltipItem.dataset.label}: ${tooltipItem.raw} hours`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    color: 'rgba(255, 255, 255, 0.5)', // Grid line color for the X-axis
+                    borderColor: 'rgba(100, 100, 100, 1)', // Border color for the grid (X-axis)
+                    borderWidth: 1 // Adjust border width of the grid
+                },
+                ticks: {
+                    color: 'white', // Change the font color of the X-axis labels to white
+                }
+            },
+            y: {
+                grid: {
+                    color: 'rgba(255, 255, 255, 0.5)', // Grid line color for the Y-axis
+                    borderWidth: 1, // Adjust border width of the grid
+                },
+                ticks: {
+                    color: 'white', // Change the font color of the Y-axis labels to white
+                },
+                beginAtZero: true
+            }
+        },
+        layout: {
+            padding: {
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: 20
+            }
+        }
+    }
+};
+
+
+
+
+// Render the bar chart
+const barChart = new Chart(document.getElementById('barChart'), barChartConfig);
+
+
+
+    // Line Chart Data (Render time over days)
+const lineChartData = {
+    labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
+    datasets: [{
+        label: 'Render Time (in hours)',
+        data: [0.33, 0.5, 0.42, 0.58, 0.67], // Converted to hours (from minutes)
+        borderColor: '#FF5733',
+        backgroundColor: 'rgba(255, 87, 51, 0.2)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 5,
+        pointBackgroundColor: '#FF5733'
+    }]
+};
+
+// Line Chart Configuration with Tooltips
+const lineChartConfig = {
+    type: 'line',
+    data: lineChartData,
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: {
+                    color: 'white' // Legend text color
+                }
+            },
+           tooltip: {
+                callbacks: {
+                    label: function (tooltipItem) {
+                        return `${tooltipItem.dataset.label}: ${tooltipItem.raw} h`;
+                    }
+                }
+            }
+      
+        },
+        scales: {
+            x: {
+                ticks: {
+                    color: 'white' // X-axis label color
+                }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return `${value.toFixed(2)} hrs`; // Display Y-axis in hours
+                    },
+                    color: 'white' // Y-axis label color
+                }
+            }
+        }
+    }
+};
+
+// Render the line chart
+const lineChart = new Chart(document.getElementById('lineChart'), lineChartConfig);
+
+
+
+
+	
+	
+
+
+</script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Ensure the DOM elements exist before adding event listeners
+        const fileInput = document.getElementById('fileInput');
+        
+        if (fileInput) {
+            // Add an event listener to file input for change event
+            fileInput.addEventListener('change', function(event) {
+                const file = event.target.files[0]; // Get the selected file
+
+                if (file) {
+                    console.log("File has been uploaded: " + file.name); // Print file name to console
+
+                    const reader = new FileReader();
+                    
+                    // Read the uploaded file as text
+                    reader.onload = function(e) {
+                        const logData = e.target.result.split("\n"); // Assuming each log entry is separated by a newline
+
+                        // Call function to extract and display first and last dates from the log
+                        extractDatesFromLog(logData);
+                    };
+                    
+                    reader.readAsText(file); // Read the file content
+                } else {
+                    console.log("No file selected."); // If no file is selected
+                }
+            });
+        } else {
+            console.warn("fileInput element not found");
+        }
+
+        // Function to extract and log first and last dates from log data
+        function extractDatesFromLog(logData) {
+            let firstDateInLog = null;
+            let lastDateInLog = null;
+
+            // Loop through each log entry
+            logData.forEach(entry => {
+                // Assuming the date is at the start of each log entry in format YYYY-MM-DD
+                const dateStr = entry.split(" ")[0]; // Adjust based on your log format (e.g., "YYYY-MM-DD ...")
+                const date = new Date(dateStr);
+
+                // Check if the date is valid
+                if (!isNaN(date)) {
+                    // Set firstDateInLog if it's the earliest
+                    if (!firstDateInLog || date < firstDateInLog) {
+                        firstDateInLog = date;
+                    }
+
+                    // Set lastDateInLog if it's the latest
+                    if (!lastDateInLog || date > lastDateInLog) {
+                        lastDateInLog = date;
+                    }
+                }
+            });
+
+            // Output the first and last date to the console
+            //console.log(`First Date in Log: ${formatDate(firstDateInLog)}`);
+            //console.log(`Last Date in Log: ${formatDate(lastDateInLog)}`);
+
+            // Update start and end dates for the calendar with extracted values
+            updateCalendarWithDates(firstDateInLog, lastDateInLog);
+        }
+
+        // Utility function to format date as 'YYYY-MM-DD'
+        function formatDate(date) {
+            if (date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0'); // months are zero-indexed
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            return "Invalid date"; // In case the date is invalid
+        }
+
+        // Function to update the calendar with the extracted start and end dates
+        function updateCalendarWithDates(firstDateInLog, lastDateInLog) {
+            // Convert to Date objects if necessary
+            const startDateObj = firstDateInLog ? new Date(firstDateInLog) : null;
+            const endDateObj = lastDateInLog ? new Date(lastDateInLog) : new Date();
+
+            // Format the dates for input fields (YYYY-MM-DD format)
+            const startDateFormatted = formatDate(startDateObj);
+            const endDateFormatted = formatDate(endDateObj);
+
+            // Ensure the date input fields exist before updating
+            const startDateInput = document.getElementById("startDate");
+            const endDateInput = document.getElementById("endDate");
+
+            if (startDateInput && endDateInput) {
+                // Update the date input fields
+                startDateInput.value = startDateFormatted;
+                endDateInput.value = endDateFormatted;
+
+                // Optionally, trigger change events to refresh any UI bindings
+                startDateInput.dispatchEvent(new Event('change')); // Trigger change event for start date input
+                endDateInput.dispatchEvent(new Event('change')); // Trigger change event for end date input
+
+                console.log(`Calendar Start Date: ${startDateFormatted}`);
+                console.log(`Calendar End Date: ${endDateFormatted}`);
+            } else {
+                console.warn("Start or End date input elements are missing");
+            }
+        }
+    });
+</script>
+
+
+<script>
+// DEBUG CONSOLE , RIGHT SIDE , good for adding messages for the user and debugging, aslo looks cool. 
+
+
+(function() {
+    const logDataContainer = document.getElementById('LOGDATA');
+
+    // Function to log messages to the LOGDATA container
+    const logData = (...args) => {
+        const formattedArgs = args.map(arg => {
+            if (typeof arg === 'object' && arg !== null) {
+                if (arg.startDate && arg.endDate) {
+                    return `Stored Date: "startDate": "${arg.startDate}", "endDate": "${arg.endDate}"`;
+                }
+                return JSON.stringify(arg, null, 2);
+            }
+            return arg;
+        });
+
+        const logMessage = document.createElement('div');
+        logMessage.style.padding = '5px';
+        logMessage.style.borderBottom = '1px solid #050';
+        logMessage.textContent = formattedArgs.join(' ');
+        logDataContainer.appendChild(logMessage);
+        logDataContainer.scrollTop = logDataContainer.scrollHeight;
+    };
+
+	 // Example: Simulate additional events
+    setTimeout(() => {
+        logData('System Ready...');
+    }, 500);
+	
+	
+	 // Example: Simulate additional events
+    setTimeout(() => {
+        logData('(╯°□°)╯︵ ┻━┻');
+    }, 5000);
+	
+	 // Example event: Log activity when a button is clicked
+    const exampleButton = document.getElementById('exampleButton');
+    if (exampleButton) {
+        exampleButton.addEventListener('click', () => {
+            logData('Example button clicked. Performing action...', 'success');
+        });
+    }
+
+	// Example event: Log custom messages on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        logData('');
+		logData('Render Dog initialized.');
+        logData('Awaiting log file...');
+		
+    });
+
+    // Override console.log
+    const originalConsoleLog = console.log;
+    console.log = (...args) => {
+        logData(...args);
+        originalConsoleLog(...args);
+    };
+
+    // Override console.error
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+        logData(...args);
+        originalConsoleError(...args);
+    };
+
+    // Clear function for the LOGDATA container
+    window.clearLogDataContainer = () => {
+        logDataContainer.innerHTML = ''; // Clear all logs
+        const initialMessage = document.createElement('div');
+        initialMessage.style.color = '#12c116';
+        initialMessage.textContent = '> Debug Console: ';
+        logDataContainer.appendChild(initialMessage);
+    };
+
+    // Add an initial message when the page first loads
+    const initialMessage = document.createElement('div');
+    initialMessage.style.color = '#12c116';
+    initialMessage.textContent = '> Debug Console:';
+    logDataContainer.appendChild(initialMessage);
+})();
+</script>
+<script>
+// Initialize the text to be displayed
+const resultText = ` 
+ > RNDR-DOG V 1.0 (alpha)<br>
+ <br>
+ > Welcome to the Render-Dog Log Viewer<br>
+ > For Node Operators using the Render Network<br>
+ > Due to the nature of RNDR-LOG, consider this experimental<br>
+ <br>
+ > You can locate your RNDR-LOG here:<br>
+ > C:\\Users\\USERNAME\\AppData\\Local\\OtoyRndrNetwork<br>
+ <br>
+ > Please consider donating and helping improve the project<br>
+ 
+ <br>
+
+`;
+
+// Function to directly display the text
+function displayText(elementId, text) {
+    const element = document.getElementById(elementId);
+    element.innerHTML = text; // Set the innerHTML to display the text with <br> tags
+}
+
+// Call the function to directly display the text
+displayText('resultContainer', resultText);
+</script>
+
+<script>
+function toggleLogData() {
+  const logDataContainer = document.getElementById('LOGDATA_CONTAINER');
+  if (logDataContainer.style.display === 'none') {
+    logDataContainer.style.display = 'flex'; // Show the container
+  } else {
+    logDataContainer.style.display = 'none'; // Hide the container
+  }
+}
+
+</script>
+<script>
+// Crappy workaround for the savedate function, simulate button press
+document.getElementById('exportContentButton').addEventListener('click', function() {
+    // Trigger the click event for #storeLastRangeButton first
+    document.getElementById('storeLastRangeButton').click();
+    
+    // Proceed with the export content button logic
+    console.log("Export content logic executed after storing last range.");
+});
+
+// Handle exportWeeklyButton
+document.getElementById('exportWeeklyButton').addEventListener('click', function() {
+    // Trigger the click event for #storeLastRangeButton first
+    document.getElementById('storeLastRangeButton').click();
+    
+    // Proceed with the export weekly button logic
+    console.log("Export weekly logic executed after storing last range.");
+});
+
+</script>
+
+
+<script>
+//Disabled, load report from front page.
+	// File Report Upload Button
+    //const fileInput = document.getElementById('uploadFileInput');
+
+    // Handle file selection and simulate the "Analyze" process
+   // fileInput.addEventListener('change', async (event) => {
+      //  const uploadedFile = event.target.files[0];
+
+       // if (uploadedFile) {
+            // Read the file content
+          //  const fileContent = await uploadedFile.text();
+
+            // Store the file content in local storage
+           // localStorage.setItem('uploadedFileContent', fileContent);
+
+            // Open overview.html in a new window
+           // window.open('html/overview.html', '_blank');
+       // } else {
+          //  alert("No file selected. Please select a file to proceed.");
+       // }
+   // });
+//</script>
+
+<script>
+    // Function to initialize the stats overview process with a MutationObserver
+    function initializeStatsOverview(resultContainerId, statsOverviewContainerId) {
+        const resultContainer = document.getElementById(resultContainerId);
+        const statsOverviewContainer = document.getElementById(statsOverviewContainerId);
+
+        if (!resultContainer || !statsOverviewContainer) {
+            console.error("One or both containers are missing.");
+            return;
+        }
+
+        // MutationObserver to watch for changes in the resultContainer
+        const observer = new MutationObserver(() => {
+            const resultText = resultContainer.innerText || '';
+
+            if (!resultText.trim()) {
+                statsOverviewContainer.innerHTML = '';
+                return;
+            }
+
+            // Parse the result text and create a summary
+            const summary = summarizeResultText(resultText);
+            statsOverviewContainer.innerHTML = summary;
+
+            // Update the pie chart with new data
+            if (resultText.includes('Successful Renders Percentage:') && resultText.includes('Failed Renders Percentage:')) {
+                updatePieChartFromData(resultText);
+            } else {
+                console.warn("Required fields for pie chart not found in resultContainer.");
+            }
+        });
+
+        // Observe changes to the child nodes of resultContainer
+        observer.observe(resultContainer, { childList: true, subtree: true });
+    }
+
+    // Function to parse and summarize the result text
+   function summarizeResultText(resultText) {
+    const lines = resultText.split('\n');
+
+    // Default placeholder values
+    let startDate = 'Not Available';
+    let endDate = 'Not Available';
+    let totalDays = '0';
+    let totalFrames = '0';
+    let failedRenders = '0';
+    let successfulPercentage = '0%';
+    let failedPercentage = '0%';
+    let totalRenderTime = '0';
+    let idleTime = '0';
+    let renderTimePercentage = '0%';
+    let idleTimePercentage = '0%';
+    let largestRenderTime = '0';
+
+    // Extract relevant information from resultText
+    lines.forEach(line => {
+        if (line.includes('START DATE SELECTED:')) startDate = line.replace('START DATE SELECTED:', '').trim();
+        if (line.includes('END DATE SELECTED:')) endDate = line.replace('END DATE SELECTED:', '').trim();
+        if (line.includes('Total Days in Range:')) totalDays = line.replace('Total Days in Range:', '').trim();
+        if (line.includes('Total Frames Rendered:')) totalFrames = line.replace('Total Frames Rendered:', '').trim();
+        if (line.includes('Failed Renders:')) failedRenders = line.replace('Failed Renders:', '').trim();
+        if (line.includes('Successful Renders Percentage:')) successfulPercentage = line.replace('Successful Renders Percentage:', '').trim();
+        if (line.includes('Failed Renders Percentage:')) failedPercentage = line.replace('Failed Renders Percentage:', '').trim();
+        if (line.includes('Total Render Time:')) totalRenderTime = line.replace('Total Render Time:', '').replace('hours', '').trim();
+        if (line.includes('Idle Time:')) idleTime = line.replace('Idle Time:', '').replace('hours', '').trim();
+        if (line.includes('Render Time Percentage:')) renderTimePercentage = line.replace('Render Time Percentage:', '').trim();
+        if (line.includes('Idle Time Percentage:')) idleTimePercentage = line.replace('Idle Time Percentage:', '').trim();
+        if (line.includes('Largest Render Time:')) largestRenderTime = line.replace('Largest Render Time:', '').replace('hours', '').trim();
+    });
+
+    // Generate the summary HTML with placeholders for missing values
+    return `
+        <ul>
+            <li><strong>Start Date:</strong> <span>${startDate}</span></li>
+            <li><strong>End Date:</strong> <span>${endDate}</span></li>
+            <li><strong>Total Days in Range:</strong> <span>${totalDays}</span></li><br>
+            <li><strong>Total Frames Rendered:</strong> <span>${totalFrames}</span></li>
+            <li><strong>Failed Renders:</strong> <span>${failedRenders}</span></li>
+            <li><strong>Successful Renders Percentage:</strong> <span>${successfulPercentage}</span></li>
+            <li><strong>Failed Renders Percentage:</strong> <span>${failedPercentage}</span></li><br>
+            <li><strong>Total Render Time:</strong> <span>${totalRenderTime} hours</span></li>
+            <li><strong>Idle Time:</strong> <span>${idleTime} hours</span></li>
+            <li><strong>Render Time Percentage:</strong> <span>${renderTimePercentage}</span></li>
+            <li><strong>Idle Time Percentage:</strong> <span>${idleTimePercentage}</span></li>
+            <li><strong>Largest Render Time:</strong> <span>${largestRenderTime} hours</span></li>
+        </ul>
+    `;
+}
+	
+	
+	
+
+    // Function to update the chart from result text
+    function updatePieChartFromData(resultText) {
+        const lines = resultText.split('\n');
+        let successfulPercentage = 85.58; // Default placeholder
+        let failedPercentage = 14.42; // Default placeholder
+
+        // Extract percentages from the result text
+        lines.forEach(line => {
+            if (line.includes('Successful Renders Percentage:')) {
+                successfulPercentage = parseFloat(line.replace('Successful Renders Percentage:', '').trim());
+            }
+            if (line.includes('Failed Renders Percentage:')) {
+                failedPercentage = parseFloat(line.replace('Failed Renders Percentage:', '').trim());
+            }
+        });
+
+        // Call the chart update function with new data
+        createOrUpdatePieChart(successfulPercentage, failedPercentage);
+    }
+
+    // Consolidated function to create or update the pie chart
+    function createOrUpdatePieChart(successfulPercentage = 85.58, failedPercentage = 14.42) {
+        const canvas = document.getElementById('rendersPieChart');
+        if (!canvas) {
+            console.error("Canvas element for pie chart not found.");
+            return;
+        }
+
+        const ctx = canvas.getContext('2d');
+
+        // Destroy the existing chart if it exists
+        if (window.successFailurePieChart instanceof Chart) {
+            window.successFailurePieChart.destroy();
+        }
+
+        // Create a new doughnut chart
+        window.successFailurePieChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Successful Renders', 'Failed Renders'],
+                datasets: [{
+                    data: [successfulPercentage, failedPercentage],
+                    backgroundColor: ['#28a745', '#dc3545'], // Green for success, red for failure
+                    hoverBackgroundColor: ['#218838', '#c82333'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#fff' // White text for dark backgrounds
+                        }
+                    }
+                }
+            }
+        });
+
+        
+    }
+
+    // Initialize everything on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeStatsOverview('resultContainer', 'statsOverviewContainer');
+        createOrUpdatePieChart(); // Placeholder data on load
+    });
+	
+	document.addEventListener('DOMContentLoaded', () => {
+    const resultContainer = document.getElementById('resultContainer');
+    const statsOverviewContainer = document.getElementById('statsOverviewContainer');
+
+    if (resultContainer) {
+        const resultText = resultContainer.innerText || '';
+        const summary = summarizeResultText(resultText);
+        statsOverviewContainer.innerHTML = summary;
+    }
+});
+	
+	
+</script>
+
+<script>
+// Function to calculate availability reward
+function calculateReward() {
+    // Get input values
+    const availabilityReward = parseFloat(document.getElementById("availabilityReward").value) || 0;
+    const gpuCount = parseInt(document.getElementById("GPUCount").value) || 0;
+    const idleTimeInput = document.getElementById("idletime").value;
+    const idleTime = parseFloat(idleTimeInput) || null; // Null if not provided
+
+    // Validate required inputs
+    if (availabilityReward <= 0 || gpuCount <= 0) {
+        alert("Please enter valid values for Availability and GPU Count.");
+        return;
+    }
+
+    // Step 1: Calculate Reward Per GPU using AVIL
+    const rewardPerGPU = availabilityReward / gpuCount;
+
+    // Step 2: Calculate Price Per GPU Per Hour if Idle Time is provided
+    const pricePerGPUPerHour = idleTime !== null ? (rewardPerGPU / idleTime) : "N/A";
+
+    // Step 3: Calculate Reward Per Week (divide Reward Per GPU by 7)
+    const rewardPerWeek = rewardPerGPU / 7;
+
+    // Display results in HTML
+    document.getElementById("avilOutput").innerText = availabilityReward.toFixed(2);
+    document.getElementById("rewardPerGPUOutput").innerText = rewardPerGPU.toFixed(2);
+    document.getElementById("pricePerGPUOutput").innerText = pricePerGPUPerHour !== "N/A" ? pricePerGPUPerHour.toFixed(2) : "N/A";
+    document.getElementById("rewardPerWeekOutput").innerText = rewardPerWeek.toFixed(2);
+}
+
+
+</script>
+
+

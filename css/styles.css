@@ -1,0 +1,517 @@
+/* Default light theme styles */
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+	background-color: #2e2e2e;
+}
+
+.dark-theme {
+    background-color: #2e2e2e;
+    color: #ecf0f1;
+}
+
+/* Styling for the custom button with border */
+#fileInputLabel {
+    border: 2px solid #4CAF50;
+    
+   
+    background-color: #f4f4f4;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+}
+
+#fileInputLabel:hover {
+    background-color: #e8e8e8;
+}
+
+/* Dark mode button styles */
+.dark-theme #fileInputLabel {
+    background-color: #34495e;
+    
+    border: 1px solid #ecf0f1;
+}
+
+/* Style for the save button */
+.save-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 20px;
+   
+    border: none;
+    cursor: pointer;
+    border: 1px solid #ecf0f1;
+    
+	font-family: Arial, sans-serif;
+}
+
+/* Hover effect */
+.save-button:hover {
+    background-color: #49525a;
+}
+
+.dark-theme #fileInputLabel:hover {
+    background-color: #2c3e50;
+}
+
+#fileInputLabel i {
+    margin-right: 8px;
+}
+
+/* Hide the actual file input */
+#fileInput {
+    display: none;
+}
+
+#resultContainer {
+    margin-top: 20px;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: #f9f9f9;
+    font-family: Arial, sans-serif;
+    min-height: 300px;
+   /* background-image: url('loading.gif'); */
+    background-size: auto 35px;  
+	background-position: top 25px left; 
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+    background-repeat: no-repeat;
+}
+
+/*#middleColumn {
+    text-align: left;
+    padding: 20px;
+}*/
+
+.bar-charts-container,
+.line-chart-container {
+	margin-top: 20px;
+    margin-bottom: 20px;
+    width: 100%;
+    
+}
+
+
+/* Update the result container for dark theme */
+.dark-theme #resultContainer {
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+#resultContainer pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 14px;
+    padding: 20px;
+    user-select: text;
+}
+
+/* Table Layout */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #ddd;
+}
+
+td {
+    
+    vertical-align: top;
+}
+
+/* Style the left column for logo, file input, and date pickers */
+#leftColumn {
+    width: 40%;
+    padding: 20px 50px 20px 40px !important;
+}
+
+/* Style for the middle column */
+#middleColumn {
+    width: 35%;
+    border-left: 2px solid #ddd;
+}
+
+/* Style for the right column */
+#rightColumn {
+    width: 30%;
+    border-left: 2px solid #ddd;
+    padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 10px !important;
+}
+
+  #resultContainer p {
+    margin: 0; /* Remove default margin */
+    padding: 0; /* Remove default padding */
+    line-height: 1.5; /* Optional: Adjust line spacing */
+  }
+
+
+/* Button for Dark Mode Toggle */
+#darkModeToggle {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 20px;
+}
+
+#darkModeToggle:hover {
+    background-color: #45a049;
+}
+
+/* Additional Styling for Price Calc Section */
+#priceCalc {
+    margin-top: 10px !important ;
+    padding: 20px;
+    border: 1px solid #ddd;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+}
+
+/* Styling for file upload and save buttons container */
+#buttonContainer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    gap: 20px;
+}
+
+.logo-container a {
+    flex: 1;
+}
+
+.logo-container .banner {
+    max-width: 100%;
+    height: auto;
+	float:right;
+}
+
+.button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+/* Target only the specific container */
+.container {
+  display: flex; /* Align children horizontally */
+  align-items: center; /* Align items vertically centered */
+  gap: 10px; /* Add space between elements */
+}
+
+#uploadFileLabel {
+display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 20px !important;
+  font-family: Arial, sans-serif;
+  background-color: #007BFF;
+  color: white;
+  border: 1px solid #3f3f3f;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  height: 30px !important; 
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+#uploadFileLabel:hover {
+  background-color: #49525a;
+  transform: scale(1.05);
+}
+
+#completionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  background-color: #007BFF;
+  color: white;
+  border: 1px solid #ecf0f1;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  height: 30px !important; 
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+#completionButton:hover {
+  background-color: #49525a;
+  transform: scale(1.05);
+}
+
+#uploadFileInput {
+  display: none; /* Hide the file input */
+}
+
+
+/* Hover effect */
+#completionButton:hover {
+    background-color: #ccc; /* Darker blue on hover */
+}
+
+/* Triggered state (when JavaScript updates the styles) */
+#completionButton.export-completed {
+    background-color: #0056b3; /* Green */
+    color: white;
+}
+		
+/* General button styling */
+button, #fileInputLabel {
+  display: inline-flex; /* Ensures icons and text align properly */
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  
+  color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+  padding: 10px 10px;
+  border: 1px solid #3f3f3f;
+  height: 50px; /* Uniform height for all buttons */
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  text-align: center;
+}
+
+
+
+
+/* Specific button colors */
+#storeLastRangeButton {
+  background-color: #34495e; /* Green for Store Dates */
+  border: 1px solid #ecf0f1;
+  display: none; /* This hides the element completely */
+}
+
+#storeLastRangeButton:hover {
+  background-color: #49525a; /* Darker green */
+  display: none; /* This hides the element completely */
+}
+
+#exportWeeklyButton  {
+  background-color: #1076a6;
+  border: 1px solid #ecf0f1;
+ 
+}
+#exportWeeklyButton:hover {
+  background-color: #49525a; 
+  
+}
+
+
+
+#restoreCalendarButton {
+  background-color: #34495e; /* Yellow for Restore Calendar */
+  border: 1px solid #ecf0f1;
+  display: none; /* This hides the element completely */
+}
+
+#restoreCalendarButton:hover {
+  background-color: #49525a; /* Darker yellow */
+  display: none; /* This hides the element completely */
+}
+
+#exportContentButton {
+  background-color: #dc3545; /* Red for Export */
+  border: 1px solid #ecf0f1;
+}
+
+#exportContentButton:hover {
+  background-color: #49525a; 
+}
+
+/* Container styling for consistent alignment */
+#buttonContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+		
+.headers {
+    background-color: #34495e; /* Light gray background */
+    padding: 5px; /* Optional: Add some padding for spacing */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+    text-align: left; /* Optional: Center-align the text */
+	padding-left: 30px; /* Move text 30px to the right */
+	border-bottom: 1px solid #ecf0f1;
+	text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7); /* Add shadow to text */
+	
+}
+
+  
+/* Styling for the seconds converter container */
+#secondsConverter {
+    background-color: #212121;
+    border: 1px solid #ddd;
+    margin: 20px auto;
+    padding: 20px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.5);
+    text-align: left;
+    font-family: Arial, sans-serif;
+}
+
+
+
+/* Styling for the input field */
+input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    
+    box-sizing: border-box;
+}
+
+/* Styling for the result display */
+.result {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+/* Styling for the output spans */
+#minutesOutput, #hoursOutput {
+    font-weight: bold;
+    color: #33d0ff;
+    font-size: 16px;
+}
+
+/* Styling for the image */
+#calc {
+    margin-bottom: 10px;
+}
+
+/* Add hover effect for input field */
+input[type="number"]:focus {
+    border-color: #888;
+    outline: none;
+}
+
+/* Responsive design */
+@media (max-width: 400px) {
+    #secondsConverter {
+        width: 90%;
+        padding: 15px;
+    }
+}
+ label {
+    margin-right: 10px;
+    font-size: 14px;
+    color: #fff;
+    cursor: pointer;
+}
+
+input[type="radio"] {
+    margin-right: 5px;
+} 
+
+    #statsOverviewContainer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        
+        padding: 10px;
+        background-color: #212121;
+        max-width: auto;
+    }
+
+/* Styling for the answers */
+#statsOverviewContainer ul li span {
+    color: #00bfff; /* Bright color for answers */
+    font-weight: bold;
+}
+
+
+   /* Styling for the date filter container */
+    #dateFilters {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+      
+    }
+
+    /* Styling for the date inputs and labels */
+    #dateInputs {
+      display: flex;
+      align-items: center;
+    }
+
+    #dateInputs span {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    #dateInputs input {
+      margin-left: 10px;
+	  margin-right: 10px;
+    }
+
+    /* Styling for the buttons */
+    #buttonGroup {
+      display: flex;
+      gap: 5px;
+    }
+
+    #buttonGroup button {
+      
+      height: 20px;
+      
+      color: #fff !important;
+      background-color: #2e2e2e !important;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    #buttonGroup button:hover {
+      background-color: #d0d0d0;
+    }
+	
+ #weeklyStatusButton {
+      background-color: #007BFF; /* Blue background */
+	  display: none;
+ }
+
+  #weeklyStatusButton:hover {
+      background-color: #0056b3; /* Darker blue on hover */
+  }
+
+  #weeklyStatusButton:active {
+      background-color: #003f7f; /* Even darker blue on click */
+  }
+  
+      .calculate-reward-btn {
+        background-color: #28a745; /* Unique green color */
+        color: white; /* White text */
+        border: none;
+        padding: 10px 20px;
+        font-size: 14px;
+       
+        
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .calculate-reward-btn:hover {
+        background-color: #218838; /* Darker green on hover */
+        transform: scale(1.05); /* Slightly enlarges button */
+    }
+
+    .calculate-reward-btn:active {
+        background-color: #1e7e34; /* Even darker green when clicked */
+        transform: scale(1); /* Resets scale on click */
+    }

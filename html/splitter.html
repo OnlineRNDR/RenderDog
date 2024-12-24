@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" href="..\images\square3.png" type="image/png">
+    <title>Log Split</title>
+    <style>
+        /* General Styling */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #2e2e2e;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            
+        }
+
+        /* Logo Styling */
+        .logo {
+            width: 350px;
+            
+            
+        }
+
+        /* File Input Container */
+        .file-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+			padding-top: 20px;
+        }
+
+        /* Upload Button Styling */
+        #logFile {
+            display: none;
+        }
+
+        label {
+            padding: 10px 20px;
+            background-color: #1e88e5;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        label:hover {
+            background-color: #1565c0;
+        }
+
+        /* Split Button Styling */
+        #splitButton {
+            padding: 10px 20px;
+            background-color: #43a047;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            display: none; /* Initially hidden */
+        }
+
+        #splitButton:hover {
+            background-color: #2e7d32;
+        }
+
+        /* Output Links */
+        #output a {
+		padding-top: 10px;
+            color: #1e88e5;
+            text-decoration: none;
+            margin: 5px 0;
+        }
+
+        #output a:hover {
+            text-decoration: underline;
+        }
+			    /* Styles for the top-left corner home icon */
+    #home-icon {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      
+      
+      padding: 5px;
+      border-radius: 5px;
+      
+    }
+
+    #home-icon a {
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      align-items: center;
+    }
+
+    #home-icon img {
+      width: 32px;
+      height: 32px;
+      margin-right: 5px;
+    }
+	
+    /* Backup Container Styling */
+    .backup-container {
+        
+        padding: 15px;
+        border: 1px solid #ccc;
+        
+        background-color: #111;
+        width: 80%;
+        max-width: 600px;
+        text-align: left;
+		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+    }
+
+    /* Main Backup Message */
+    .backup-message {
+        display: block;
+        font-size: 12px;
+        font-family: Arial, sans-serif;
+        color: #c3882f;
+        margin-bottom: 10px;
+    }
+
+    /* Additional Backup Details */
+    .backup-details {
+        font-size: 1em;
+		font-family: Arial, sans-serif;
+        color: #fff;
+        line-height: 1.5;
+        margin: 5px 0;
+    }
+
+    /* Weekly Options Styling */
+    #weeklyOptions {
+        margin-top: 15px;
+    }
+
+    select, button {
+        margin: 10px;
+        padding: 8px 12px;
+        font-size: 1em;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    button {
+        background-color: #1e88e5;
+        color: #fff;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    button:hover {
+        background-color: #1565c0;
+    }
+	
+    </style>
+</head>
+<body>
+		  <!-- Home Icon Div -->
+  <div id="home-icon">
+    <a href="../Render_Dog_Main.html">
+      <img src="../Images/home-icon.png" alt="Home Icon">
+      
+    </a>
+  </div>
+    <img src="..\images\toolbox.png" alt="Logo" class="logo" />
+	<div class="backup-container">
+    <span class="backup-message">Ensure you have saved a copy of the file before proceeding to avoid accidental data loss.</span>
+    <p class="backup-details">Step (1): Upload Log File</p>
+    <p class="backup-details">Option (A):Select if you would like to split into weekly report chunks.</p>
+	<p class="backup-details">Option (B):Select if you would like break the log file into smaller chunks.</p>
+	<span class="backup-message">Splits around 15000 lines on... rndr restarting, ideal for large rndr-logs.txt</span>
+	<p class="backup-details">Step (2)  Download file(s) individually or try the download all button</p>
+</div>
+	<div class="file-container">
+    <input type="file" id="logFile" accept=".log,.txt" />
+        <label for="logFile">Load rndr_Log.txt</label>
+  <div id="weeklyOptions" style="display: none;">
+    
+    <select id="weekStart">
+        <option value="0">Sunday</option>
+        <option value="1" selected>Monday</option>
+        <option value="2">Tuesday</option>
+        <option value="3">Wednesday</option>
+        <option value="4">Thursday</option>
+        <option value="5">Friday</option>
+        <option value="6">Saturday</option>
+    </select>
+    <button id="weeklyButton">Split Weekly</button>
+</div>
+
+</div>
+    <div class="file-container">
+        <input type="file" id="logFile" accept=".log,.txt" />
+       
+		
+        <button id="splitButton">Split Log File into Smaller Chunks</button>
+    </div>
+
+    <div id="output"></div>
+
+<script>
+    const fileInput = document.getElementById('logFile');
+    const splitButton = document.getElementById('splitButton'); // For phrase-based splitting
+    const weeklyButton = document.getElementById('weeklyButton'); // For weekly splitting
+    const downloadAllButton = document.createElement('button'); // For downloading all files
+    downloadAllButton.textContent = "Download All";
+    downloadAllButton.style.display = "none"; // Hidden initially
+    document.body.appendChild(downloadAllButton);
+
+    let generatedFiles = []; // Array to store all generated file objects
+
+    // Show buttons when a file is selected
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            splitButton.style.display = 'inline-block';
+            weeklyButton.style.display = 'inline-block';
+        } else {
+            splitButton.style.display = 'none';
+            weeklyButton.style.display = 'none';
+        }
+        downloadAllButton.style.display = "none"; // Hide until files are generated
+    });
+
+    // Function to handle file generation
+    function handleFileGeneration(files, output) {
+        generatedFiles = files; // Store the files for "Download All"
+        output.innerHTML = '';
+        files.forEach((file) => {
+            const blob = new Blob([file.content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = file.name;
+            link.textContent = `Download ${file.name}`;
+            link.style.display = 'block';
+            output.appendChild(link);
+        });
+
+        // Show the "Download All" button
+        downloadAllButton.style.display = "inline-block";
+    }
+
+    // Handle "Download All" functionality
+    downloadAllButton.addEventListener('click', () => {
+        if (generatedFiles.length === 0) {
+            alert("No files available to download.");
+            return;
+        }
+
+        let index = 0;
+
+        function downloadNextFile() {
+            if (index < generatedFiles.length) {
+                const file = generatedFiles[index];
+                const blob = new Blob([file.content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = file.name;
+
+                // Programmatically trigger the download
+                document.body.appendChild(link); // Append the link temporarily
+                link.click(); // Trigger the download
+                document.body.removeChild(link); // Remove the link after download
+
+                // Move to the next file
+                index++;
+
+                // Delay before starting the next download
+                setTimeout(downloadNextFile, 200); // 200ms delay
+            }
+        }
+
+        downloadNextFile();
+    });
+
+    // Phrase-based splitting logic
+    splitButton.addEventListener('click', () => {
+        const output = document.getElementById('output');
+
+        if (!fileInput.files.length) {
+            alert('Please select a log file first.');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            const fileContent = event.target.result;
+            const lines = fileContent.split(/\r?\n/);
+            const maxLines = 15000;
+            const files = [];
+            let tempFile = [];
+            let lineCount = 0;
+            let firstDate = null;
+            let lastDate = null;
+            const dateRegex = /\b\d{4}-\d{2}-\d{2}\b/;
+
+            for (let i = 0; i < lines.length; i++) {
+                tempFile.push(lines[i]);
+                lineCount++;
+
+                const match = lines[i].match(dateRegex);
+                if (match) {
+                    if (!firstDate) firstDate = match[0];
+                    lastDate = match[0];
+                }
+
+                if (lineCount >= maxLines) {
+                    let foundBoundary = false;
+                    for (let j = i; j < lines.length; j++) {
+                        tempFile.push(lines[j]);
+                        lineCount++;
+                        i = j;
+
+                        const match = lines[j].match(dateRegex);
+                        if (match) lastDate = match[0];
+
+                        if (lines[j].includes("rndr client is starting...")) {
+                            foundBoundary = true;
+                            break;
+                        }
+                    }
+
+                    if (foundBoundary || i === lines.length - 1) {
+                        const fileName = `log_part_${files.length + 1}_${firstDate || 'unknown'}_${lastDate || 'unknown'}.txt`;
+                        files.push({ content: tempFile.join("\n"), name: fileName });
+                        tempFile = [];
+                        lineCount = 0;
+                        firstDate = null;
+                        lastDate = null;
+                    }
+                }
+            }
+
+            if (tempFile.length > 0) {
+                const fileName = `log_part_${files.length + 1}_${firstDate || 'unknown'}_${lastDate || 'unknown'}.txt`;
+                files.push({ content: tempFile.join("\n"), name: fileName });
+            }
+
+            handleFileGeneration(files, output);
+        };
+
+        reader.readAsText(file);
+    });
+	// Toggle the visibility of the weekly options
+function toggleWeeklyOptions(show) {
+    const weeklyOptions = document.getElementById('weeklyOptions');
+    weeklyOptions.style.display = show ? 'block' : 'none';
+}
+
+// Example: Show weekly options when a file is selected
+fileInput.addEventListener('change', () => {
+    const hasFile = fileInput.files.length > 0;
+    toggleWeeklyOptions(hasFile);
+});
+
+    // Weekly splitting logic with week numbers
+    weeklyButton.addEventListener('click', () => {
+        const output = document.getElementById('output');
+        const weekStartDay = parseInt(document.getElementById('weekStart').value, 10);
+
+        if (!fileInput.files.length) {
+            alert('Please select a log file first.');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            const fileContent = event.target.result;
+            const lines = fileContent.split(/\r?\n/);
+            const files = [];
+            const dateRegex = /\b\d{4}-\d{2}-\d{2}\b/;
+
+            let currentWeek = [];
+            let firstDate = null;
+            let startOfWeek = null;
+            let endOfWeek = null;
+            let weekNumber = 1; // Start week numbering at 1
+
+            // Function to calculate the start and end of the week
+            function calculateWeekRange(date, startDay) {
+                const dayOfWeek = date.getDay();
+                const diffToStart = (dayOfWeek < startDay ? -7 : 0) + startDay - dayOfWeek;
+                const start = new Date(date);
+                start.setDate(date.getDate() + diffToStart);
+                start.setHours(0, 0, 0, 0);
+
+                const end = new Date(start);
+                end.setDate(start.getDate() + 6);
+                end.setHours(23, 59, 59, 999);
+
+                return { start, end };
+            }
+
+            lines.forEach(line => {
+                const match = line.match(dateRegex);
+                if (match) {
+                    const currentDate = new Date(match[0]);
+
+                    if (!firstDate) {
+                        firstDate = currentDate;
+                        const range = calculateWeekRange(currentDate, weekStartDay);
+                        startOfWeek = range.start;
+                        endOfWeek = range.end;
+                    }
+
+                    if (currentDate > endOfWeek) {
+                        // Save the current week
+                        if (currentWeek.length > 0) {
+                            const fileName = `WEEK_${weekNumber}_log_${startOfWeek.toISOString().split('T')[0]}_to_${endOfWeek.toISOString().split('T')[0]}.txt`;
+                            files.push({ content: currentWeek.join("\n"), name: fileName });
+                        }
+
+                        // Start a new week
+                        weekNumber++; // Increment week number
+                        const range = calculateWeekRange(currentDate, weekStartDay);
+                        startOfWeek = range.start;
+                        endOfWeek = range.end;
+                        currentWeek = [];
+                    }
+                }
+
+                // Add the line to the current week
+                currentWeek.push(line);
+            });
+
+            // Save the last week
+            if (currentWeek.length > 0) {
+                const fileName = `WEEK_${weekNumber}_log_${startOfWeek.toISOString().split('T')[0]}_to_${endOfWeek.toISOString().split('T')[0]}.txt`;
+                files.push({ content: currentWeek.join("\n"), name: fileName });
+            }
+
+            handleFileGeneration(files, output);
+        };
+
+        reader.readAsText(file);
+    });
+</script>
+
+
+
+</body>
+</html>

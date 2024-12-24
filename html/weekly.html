@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Render Log Dashboard</title>
+    <link rel="icon" href="..\Images\square5.png" type="image/png">
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4a90e2;
+            margin-bottom: 30px;
+        }
+
+			.dynamic-log-container {
+    display: flex;
+    flex-wrap: nowrap; /* Prevents wrapping to a new row */
+    justify-content: space-between; /* Evenly distributes space between boxes */
+    gap: 10px; /* Consistent spacing between boxes */
+    margin-top: 20px;
+    overflow-x: auto; /* Adds horizontal scroll if boxes exceed container width */
+    padding-bottom: 10px; /* Adds space for the scrollbar */
+}
+
+.log-card {
+    flex: 0 0 23%; /* Each card takes ~23% of the container width */
+    max-width: 300px; /* Prevents cards from becoming too wide */
+    min-width: 250px; /* Ensures readability at smaller sizes */
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    text-align: left;
+	border: 1px solid #333;
+}
+
+
+
+        .log-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4a90e2;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .log-card p {
+            margin: 5px 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        #viewer, #storedViewer {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            width: 500px;
+            
+            height: fit-content; /* Dynamically adjusts to content width */
+            white-space: pre-wrap;
+            font-family: monospace;
+            color: #e0e0e0;
+            margin-top: 20px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #4a90e2;
+            color: #fff;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #357abd;
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(1);
+        }
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            background-color: #1e1e1e;
+            color: #fff;
+            border: 1px solid #333;
+			
+        }
+		
+		/* Hide the default file input */
+.file-input-container input[type="file"] {
+    display: none; /* Hides the default file input */
+}
+
+/* Style the custom label as a button */
+.file-input-container .custom-file-label {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 16px;
+    color: #fff;
+    background-color: #4a90e2;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+/* Hover effect */
+.file-input-container .custom-file-label:hover {
+    background-color: #357abd;
+    transform: scale(1.05);
+}
+
+/* Active (clicked) effect */
+.file-input-container .custom-file-label:active {
+    transform: scale(1);
+}
+#fileDropdown {
+    min-width: 400px; /* Sets the minimum width */
+    padding: 10px; /* Adds padding for better appearance */
+    font-size: 16px; /* Adjusts the font size for readability */
+    border-radius: 5px; /* Adds rounded corners */
+    background-color: #1e1e1e; /* Matches the dark theme */
+    color: #fff; /* Sets the text color */
+    border: 1px solid #333; /* Adds a border */
+    appearance: none; /* Removes default arrow styling (optional) */
+}
+.logo-container {
+    text-align: center;
+    margin-bottom: 20px; /* Adds space between the logo and the heading */
+}
+
+.logo {
+    max-width: 500px; /* Adjust the size of the logo */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 8px; /* Optional: Adds slight rounding to the logo */
+}
+
+
+/* Container for viewer and chart */
+.content-container {
+    display: flex;
+    flex-direction: row; /* Arrange children side by side */
+    justify-content: space-between; /* Space evenly between the two */
+    gap: 20px; /* Add spacing between viewer and chart */
+    margin-top: 20px; /* Add margin above the container */
+    width: 100%; /* Take full width of the parent container */
+}
+
+/* Style for the viewer */
+#viewer {
+    flex: 1; /* Take equal width as the chart */
+    max-width: 50%; /* Ensure it doesn’t exceed 50% */
+    height: 400px; /* Set a fixed height */
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    white-space: pre-wrap;
+    font-family: monospace;
+    color: #e0e0e0;
+    height: auto;
+}
+
+/* Style for the chart container */
+.chart-container {
+	margin: 20px auto; /* Centers the chart */
+   
+    flex: 1; /* Take equal width as the viewer */
+    max-width: 50%; /* Ensure it doesn’t exceed 50% */
+    height: auto; /* Set a fixed height for the chart */
+   
+    border-radius: 8px;
+    
+    
+}
+/* Container for viewer and chart */
+.content-container {
+    display: flex;
+    flex-direction: row; /* Arrange children side by side */
+    justify-content: space-between; /* Space evenly between the two */
+    gap: 20px; /* Add spacing between viewer and chart */
+    margin-top: 20px; /* Add margin above the container */
+    width: 100%; /* Take full width of the parent container */
+}
+
+/* Style for the viewer */
+#viewer {
+    flex: 1; /* Take equal width as the chart container */
+    max-width: 50%; /* Ensure it doesn’t exceed 50% */
+    height: auto; /* Adjust height dynamically */
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    white-space: pre-wrap;
+    font-family: monospace;
+    color: #e0e0e0;
+}
+
+/* Chart container styling */
+.chart-container {
+    flex: 1; /* Ensure it takes equal width as the viewer */
+    display: flex;
+    flex-direction: column; /* Stack charts vertically */
+    gap: 20px; /* Add spacing between chart boxes */
+	
+}
+
+/* Individual chart box styling */
+.chart-box {
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    text-align: center; /* Center the chart */
+    display: flex;
+    align-items: center; /* Center the chart vertically */
+    justify-content: center; /* Center the chart horizontally */
+    height: 300px; /* Optional: Fixed height for consistent appearance */
+}
+
+/* Ensure canvas adapts to its container */
+.chart-box canvas {
+    width: 100%;
+    height: auto;
+}
+
+    </style>
+</head>
+<body>
+ <div id="home-icon">
+    <a href="../Render_Dog_Main.html">
+      <img src="../Images/home-icon.png" alt="Home Icon">
+      
+    </a>
+  </div>
+    <div class="container">
+        <div class="logo-container">
+    <img src="../Images/logo5.png" alt="Render Log Dashboard Logo" class="logo">
+</div>
+
+        <div class="controls">
+            <div class="file-input-container">
+    <label for="fileInput" class="custom-file-label">Choose Files</label>
+    <input type="file" id="fileInput" multiple onchange="loadFiles()" />
+</div>
+
+           
+            <select id="fileDropdown" onchange="selectFile()">
+                <option value="" disabled selected>Select a file</option>
+            </select>
+			<button onclick="previousFile()">← Previous</button>
+    <button onclick="nextFile()">Next →</button>
+	 <div class="controls">
+            <button onclick="combineFiles()">Combine Files</button>
+            <button onclick="exportCombined()">Export Combined</button>
+        </div>
+        </div>
+
+        <div class="dynamic-log-container">
+            <div id="date-info" class="log-card">
+                <strong class="log-title">DATE RANGE</strong>
+                <p id="start-end-dates">Start Date: N/A, End Date: N/A</p>
+                <p id="total-days">Total Days: N/A</p>
+            </div>
+
+            <div id="section-2" class="log-card">
+                <strong class="log-title">RENDER STATISTICS</strong>
+                <p id="total-frames">Total Frames Rendered: N/A</p>
+                <p id="failed-renders">Failed Renders: N/A</p>
+                <p id="successful-percentage">Successful Renders Percentage: N/A</p>
+                <p id="failed-percentage">Failed Renders Percentage: N/A</p>
+            </div>
+
+            <div id="section-3" class="log-card">
+                <strong class="log-title">TIME AND EFFICIENCY</strong>
+                <p id="largest-render-time">Largest Render Time: N/A</p>
+                <p id="total-render-time">Total Render Time: N/A</p>
+                <p id="render-time-percentage">Render Time Percentage: N/A</p>
+                <p id="idle-time">Idle Time: N/A</p>
+                <p id="idle-time-percentage">Idle Time Percentage: N/A</p>
+            </div>
+
+            <div id="section-4" class="log-card">
+                <strong class="log-title">RENDER JOB STATISTICS</strong>
+                <p id="new-job-config">Starting a new render job with config hash: N/A</p>
+                <p id="jobs-canceled">Job was Canceled: N/A</p>
+                <p id="client-starting">RNDR Client is Starting: N/A</p>
+                <p id="failing-job">Failing Job (Resource Usage Too High): N/A</p>
+                <p id="client-aborting">Client is Aborting a Render: N/A</p>
+            </div>
+        </div>
+
+<div class="content-container">
+    <div id="viewer">This is the weekly reports viewer.
+	<br>You can select multiple files, when uploading.
+	<br>hit load files to refresh the data.
+	<br>you can scroll left and right for each week 
+	<br>combine files will combine all the files loaded into one large weekly report
+	<br>export combined will save all the data as .txt
+	<br>please note the import function code is written
+	<br>but for safety reasons I have not included the .JS ,this can easily be implemented.
+	
+	
+	</div>
+    <div class="chart-container">
+        <!-- Bar Chart Box --><h3>Render Statistics</h3>
+        <div class="chart-box">
+            
+            <canvas id="renderBarChart"></canvas>
+        </div><h3>Render vs Idle Time</h3>
+        <!-- Pie Chart Box -->
+        <div class="chart-box">
+            
+            <canvas id="renderPieChart"></canvas>
+        </div>
+    </div>
+</div>
+<div id="storedViewer">Combined content will appear here...</div>	
+		
+    </div>
+	
+
+</div>
+
+		
+		
+
+       
+    </div>
+
+<script>
+    let files = []; // To store selected files
+    let currentIndex = 0; // Track current file
+    let combinedContent = ''; // To store combined content
+    let renderChart; // Reference to the Chart.js instance
+
+function loadFiles() {
+    const input = document.getElementById('fileInput');
+    const fileDropdown = document.getElementById('fileDropdown');
+    files = Array.from(input.files).sort((a, b) => a.name.localeCompare(b.name));
+
+    fileDropdown.innerHTML = ''; // Clear the dropdown
+
+    if (files.length > 0) {
+        files.forEach((file, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = file.name;
+
+            // Automatically select the first file
+            if (index === 0) {
+                option.selected = true;
+            }
+
+            fileDropdown.appendChild(option);
+        });
+
+        currentIndex = 0; // Set the first file as current
+        displayFileContent(); // Automatically display the content of the first file
+    } else {
+        alert('No files selected.');
+    }
+}
+
+
+function displayFileContent() {
+    const viewer = document.getElementById('viewer');
+    if (files.length > 0) {
+        const file = files[currentIndex];
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            viewer.textContent = event.target.result;
+            updateDynamicLog(); // Update log data
+            renderBarChart(); // Render the updated chart
+        };
+        reader.readAsText(file);
+    } else {
+        viewer.textContent = 'No content available.';
+    }
+}
+
+
+    // Navigation between files
+    function previousFile() {
+        if (files.length > 0) {
+            currentIndex = (currentIndex - 1 + files.length) % files.length;
+            displayFileContent();
+            updateDropdownSelection();
+        }
+    }
+
+    function nextFile() {
+        if (files.length > 0) {
+            currentIndex = (currentIndex + 1) % files.length;
+            displayFileContent();
+            updateDropdownSelection();
+        }
+    }
+
+    function updateDropdownSelection() {
+        const fileDropdown = document.getElementById('fileDropdown');
+        fileDropdown.value = currentIndex;
+    }
+
+    function selectFile() {
+        const fileDropdown = document.getElementById('fileDropdown');
+        currentIndex = parseInt(fileDropdown.value, 10);
+        displayFileContent();
+    }
+
+    // Function to combine all selected files
+    function combineFiles() {
+        const storedViewer = document.getElementById('storedViewer');
+        if (files.length > 0) {
+            combinedContent = '';
+            const promises = files.map(file => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        resolve(`File: ${file.name}\n===================================\n${reader.result}\n\n`);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsText(file);
+                });
+            });
+
+            Promise.all(promises).then(results => {
+                combinedContent = results.join('');
+                storedViewer.textContent = combinedContent;
+            }).catch(error => {
+                alert('Error reading files: ' + error.message);
+            });
+        } else {
+            alert('No files to combine.');
+        }
+    }
+
+    // Function to export the combined content as a text file
+    function exportCombined() {
+        if (combinedContent) {
+            const blob = new Blob([combinedContent], { type: 'text/plain' });
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().replace(/[:\-T]/g, '_').replace(/\..+/, '');
+            link.download = `Combined_Report_${timestamp}.txt`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            URL.revokeObjectURL(link.href);
+        } else {
+            alert('No combined content to export.');
+        }
+    }
+
+    // Function to parse and update all log sections and chart
+    function updateDynamicLog() {
+        const viewer = document.getElementById('viewer');
+        const content = viewer.textContent;
+
+        // DATE RANGE
+        const startDate = content.match(/START DATE SELECTED:\s*([\d/]+)/)?.[1] || 'N/A';
+        const endDate = content.match(/END DATE SELECTED:\s*([\d/]+)/)?.[1] || 'N/A';
+        const totalDays = content.match(/Total Days in Range:\s*(\d+)/)?.[1] || 'N/A';
+
+        document.getElementById('start-end-dates').textContent = `Start Date: ${startDate}, End Date: ${endDate}`;
+        document.getElementById('total-days').textContent = `Total Days: ${totalDays}`;
+
+        // RENDER STATISTICS
+        const totalFrames = content.match(/Total Frames Rendered:\s*(\d+)/)?.[1] || 'N/A';
+        const failedRenders = content.match(/Failed Renders:\s*(\d+)/)?.[1] || 'N/A';
+        const successfulPercentage = parseFloat(content.match(/Successful Renders Percentage:\s*([\d.]+)%/)?.[1]) || 0;
+        const failedPercentage = parseFloat(content.match(/Failed Renders Percentage:\s*([\d.]+)%/)?.[1]) || 0;
+
+        document.getElementById('total-frames').textContent = `Total Frames Rendered: ${totalFrames}`;
+        document.getElementById('failed-renders').textContent = `Failed Renders: ${failedRenders}`;
+        document.getElementById('successful-percentage').textContent = `Successful Renders Percentage: ${successfulPercentage}%`;
+        document.getElementById('failed-percentage').textContent = `Failed Renders Percentage: ${failedPercentage}%`;
+
+        // TIME AND EFFICIENCY
+        const largestRenderTimeSeconds = content.match(/Largest Render Time:\s*([\d.]+)\s*seconds/)?.[1];
+        const largestRenderTimeHours = largestRenderTimeSeconds ? (largestRenderTimeSeconds / 3600).toFixed(2) : 'N/A';
+        const totalRenderTimeSeconds = content.match(/Total Render Time:\s*([\d.]+)\s*seconds/)?.[1];
+        const totalRenderTimeHours = totalRenderTimeSeconds ? (totalRenderTimeSeconds / 3600).toFixed(2) : 'N/A';
+        const renderTimePercentage = content.match(/Render Time Percentage:\s*([\d.]+)%/)?.[1] || 'N/A';
+        const idleTimeSeconds = content.match(/Idle Time:\s*([\d.]+)\s*seconds/)?.[1];
+        const idleTimeHours = idleTimeSeconds ? (idleTimeSeconds / 3600).toFixed(2) : 'N/A';
+        const idleTimePercentage = content.match(/Idle Time Percentage:\s*([\d.]+)%/)?.[1] || 'N/A';
+
+        document.getElementById('largest-render-time').textContent = `Largest Render Time: ${largestRenderTimeHours} hours`;
+        document.getElementById('total-render-time').textContent = `Total Render Time: ${totalRenderTimeHours} hours`;
+        document.getElementById('render-time-percentage').textContent = `Render Time Percentage: ${renderTimePercentage}%`;
+        document.getElementById('idle-time').textContent = `Idle Time: ${idleTimeHours} hours`;
+        document.getElementById('idle-time-percentage').textContent = `Idle Time Percentage: ${idleTimePercentage}%`;
+
+        // RENDER JOB STATISTICS
+        const newJobConfig = parseInt(content.match(/starting a new render job with config hash:\s*(\d+)/i)?.[1]) || 0;
+        const jobsCanceled = parseInt(content.match(/Job was Canceled:\s*(\d+)/)?.[1]) || 0;
+        const clientStarting = parseInt(content.match(/RNDR Client is Starting:\s*(\d+)/)?.[1]) || 0;
+        const failingJob = parseInt(content.match(/failing job, resource usage is too high:\s*(\d+)/i)?.[1]) || 0;
+        const clientAborting = parseInt(content.match(/client is aborting a render:\s*(\d+)/i)?.[1]) || 0;
+
+        document.getElementById('new-job-config').textContent = `Starting a new render job with config hash: ${newJobConfig}`;
+        document.getElementById('jobs-canceled').textContent = `Job was Canceled: ${jobsCanceled}`;
+        document.getElementById('client-starting').textContent = `RNDR Client is Starting: ${clientStarting}`;
+        document.getElementById('failing-job').textContent = `Failing Job (Resource Usage Too High): ${failingJob}`;
+        document.getElementById('client-aborting').textContent = `Client is Aborting a Render: ${clientAborting}`;
+
+        
+
+    }
+</script>
+
+<script>
+// Function to extract data and render a pie chart
+function renderPieChart() {
+    const viewerContent = document.getElementById('viewer').textContent;
+
+    // Extract the required percentages
+    const renderTimePercentage = parseFloat(viewerContent.match(/Render Time Percentage:\s*([\d.]+)%/)?.[1]) || 0;
+    const idleTimePercentage = parseFloat(viewerContent.match(/Idle Time Percentage:\s*([\d.]+)%/)?.[1]) || 0;
+
+    // Validate percentages, or use dummy data if not valid
+    const isValidData = renderTimePercentage + idleTimePercentage === 100;
+    const data = isValidData
+        ? [renderTimePercentage, idleTimePercentage]
+        : [60, 40]; // Dummy values: 60% Render Time, 40% Idle Time
+
+    // Chart.js rendering
+    const pieChartContainer = document.getElementById('renderPieChart').getContext('2d');
+
+    // If a chart already exists, destroy it before creating a new one
+    if (window.renderPieChartInstance) {
+        window.renderPieChartInstance.destroy();
+    }
+	// type changed to bar for easier viewing
+    window.renderPieChartInstance = new Chart(pieChartContainer, {
+        type: 'bar',
+        data: {
+            labels: ['Render Time (%)', 'Idle Time (%)'],
+            datasets: [{
+                label: 'Time Distribution',
+                data: data,
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.6)', // Render Time
+                    'rgba(255, 206, 86, 0.6)'  // Idle Time
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true, // Show legend for clarity
+                    labels: {
+                        color: '#fff' // Legend text in white
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Render the chart on page load with dummy data
+document.addEventListener('DOMContentLoaded', () => {
+    renderPieChart();
+});
+</script>
+
+<script>
+// Function to extract data and render a bar chart
+function renderBarChart() {
+    const viewerContent = document.getElementById('viewer').textContent;
+
+    // Extract required values
+    const totalFramesRenderedMatch = viewerContent.match(/Total Frames Rendered:\s*(\d+)/);
+    const totalFramesRendered = totalFramesRenderedMatch ? parseInt(totalFramesRenderedMatch[1]) : null;
+
+    const failedRendersMatch = viewerContent.match(/Failed Renders:\s*(\d+)/);
+    const failedRenders = failedRendersMatch ? parseInt(failedRendersMatch[1]) : null;
+
+    const newRenderJobsMatch = viewerContent.match(/starting a new render job with config hash:\s*(\d+)/i);
+    const newRenderJobs = newRenderJobsMatch ? parseInt(newRenderJobsMatch[1]) : null;
+
+    // Use dummy data only if values are null
+    const data = [
+        newRenderJobs !== null ? newRenderJobs : 10, // Dummy value for New Render Jobs
+        totalFramesRendered !== null ? totalFramesRendered : 50, // Dummy value for Total Frames Rendered
+        failedRenders !== null ? failedRenders : 5 // Dummy value for Failed Renders
+    ];
+
+    // Chart.js rendering
+    const barChartContainer = document.getElementById('renderBarChart').getContext('2d');
+
+    // If a chart already exists, destroy it before creating a new one
+    if (window.renderBarChartInstance) {
+        window.renderBarChartInstance.destroy();
+    }
+
+    window.renderBarChartInstance = new Chart(barChartContainer, {
+        type: 'bar',
+        data: {
+            labels: ['New Render Jobs', 'Total Frames Rendered', 'Failed Renders'],
+            datasets: [{
+                label: 'Render Statistics',
+                data: data,
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.6)', // New Render Jobs
+                    'rgba(255, 99, 132, 0.6)', // Total Frames
+                    'rgba(153, 102, 255, 0.6)'  // Failed Renders
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#fff' // Tick labels in white
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)' // White gridlines
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: '#fff' // Tick labels in white
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)' // White gridlines
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false // Hide legend as labels are self-explanatory
+                }
+            }
+        }
+    });
+}
+
+// Render the chart on page load with dummy data
+document.addEventListener('DOMContentLoaded', () => {
+    renderBarChart();
+});
+</script>
+
+
+
+	
+	
+</body>
+</html>

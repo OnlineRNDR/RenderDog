@@ -1,0 +1,844 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" href="../Images/square2.png" type="image/png">
+    <title>Render Log Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+/* General Page Styling */
+body {
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 20px;
+    background-color: #2e2e2e; /* Dark background */
+    color: #f0f0f0; /* Light gray text */
+    line-height: 1.6;
+}
+
+h1, h2 {
+    color: #ffffff; /* White headings */
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+/* Logo Styling */
+#logoContainer {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#logo {
+    max-width: 600px;
+    height: auto;
+    transition: transform 0.3s ease;
+}
+
+
+/* File Input Container Styling */
+#fileInputContainer {
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* Hide the Default File Input */
+#fileInput {
+    display: none; /* Hides the original input button */
+}
+
+/* Custom Label to Act as the Button */
+#fileInputLabel {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #007bff; /* Primary button color */
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    text-align: center;
+}
+
+#fileInputLabel:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+}
+
+#fileInputLabel:active {
+    transform: translateY(0); /* Return on click */
+}
+
+
+/* Hide content initially */
+#content {
+    display: none;
+}
+
+/* Date Navigation Styling */
+#dateNavigator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 15px;
+}
+
+button {
+    padding: 8px 16px;
+    border: none;
+    background-color: #007bff; /* Primary button color */
+    color: #ffffff;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: #0056b3; /* Darker blue */
+    transform: translateY(-2px); /* Lift effect */
+}
+
+button:disabled {
+    background-color: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+/* Summary Section Styling */
+#summary {
+    text-align: center;
+    margin: 10px auto;
+    padding: 15px;
+    width: 90%;
+    
+}
+
+/* Chart Containers */
+.chart-container {
+    width: 80%;
+    margin: 20px auto;
+    background-color: #3a3a3a;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Table Styling */
+table {
+    width: 80%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    background-color: #3a3a3a;
+    color: #f0f0f0;
+    border: 1px solid #444;
+    border-radius: 8px;
+}
+
+th, td {
+    padding: 10px;
+    border: 1px solid #555;
+    text-align: center;
+}
+
+th {
+    background-color: #444;
+    color: #ffffff;
+    transition: background-color 0.3s ease;
+}
+
+th:hover {
+    background-color: #555;
+    cursor: pointer;
+}
+
+tr:nth-child(even) {
+    background-color: #383838;
+}
+
+tr:hover {
+    background-color: #4a4a4a; /* Highlight row on hover */
+}
+
+/* No Data Message */
+#noDataMessage {
+    text-align: center;
+    font-size: 18px;
+    color: #aaa;
+    margin: 20px;
+}
+
+.chart-container {
+    width: 80%;
+    height: 500px; /* Fixed height */
+    margin: 20px auto;
+    background-color: #3a3a3a;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+table tbody tr:nth-child(even) {
+    background-color: #383838;
+}
+/* Container for the summary */
+.summary-container {
+    display: grid; /* Use CSS Grid for layout */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive grid */
+    gap: 20px; /* Space between boxes */
+    margin: 20px 0; /* Add spacing above and below */
+}
+
+/* Individual box styling */
+.summary-box {
+    background-color: #3a3a3a; /* Box background */
+    color: #f0f0f0; /* Text color */
+    border: 1px solid #444; /* Border styling */
+    border-radius: 8px; /* Rounded corners */
+    padding: 15px; /* Internal spacing */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+    text-align: left; /* Align text to the left */
+}
+
+/* Header styling for each box */
+.summary-box h3 {
+    margin-bottom: 20px; /* Space below header */
+    color: #3498db; /* Blue header text color */
+    text-align: center; /* Center align headers */
+    font-size: 18px; /* Slightly larger font size */
+    text-transform: uppercase; /* Make headers uppercase for emphasis */
+    letter-spacing: 1px; /* Add some spacing between letters */
+}
+
+/* Paragraph styling for consistent spacing */
+.summary-box p {
+    margin: 5px 0; /* Space between paragraphs */
+    font-size: 14px; /* Font size */
+}
+		
+	    /* Styles for the top-left corner home icon */
+    #home-icon {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      
+      
+      padding: 5px;
+      border-radius: 5px;
+      
+    }
+
+    #home-icon a {
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      align-items: center;
+    }
+
+    #home-icon img {
+      width: 32px;
+      height: 32px;
+      margin-right: 5px;
+    }		
+    </style>
+</head>
+<body>
+  <!-- Home Icon Div -->
+  <div id="home-icon">
+    <a href="../Render_Dog_Main.html">
+      <img src="../Images/home-icon.png" alt="Home Icon">
+      
+    </a>
+  </div>
+    <!-- Logo Section -->
+    <div id="logoContainer">
+        <img src="../Images/logo3.png" alt="Render Log Analyzer Logo" id="logo">
+    </div>
+   <div id="fileInputContainer">
+    <label for="fileInput" id="fileInputLabel">Upload Report</label>
+    
+    <input type="file" id="fileInput" accept=".txt">
+</div>
+
+    <div id="content">
+        <h2>Render-Dog Report Breakdown</h2>
+        <div id="summary"></div>
+		
+		 <h2>Successful and Failed Frames Per Day</h2>
+        <table id="successfulFramesTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable('successfulFramesTable', 0)">Date</th>
+                    <th onclick="sortTable('successfulFramesTable', 1)">Total Successful Frames</th>
+                    <th onclick="sortTable('successfulFramesTable', 2)">Failed Renders</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+
+		 <h2>Successful and Failed Frames Line Graph</h2>
+				<div class="chart-container">
+					<canvas id="framesLineChart"></canvas>
+				</div>
+        
+		
+		 <!-- <h2>Render Success vs Failures</h2>
+        <div class="chart-container">
+            <canvas id="successChart"></canvas>
+        </div>-->
+
+
+
+			   <h2>Total Render Times Per Day</h2>
+		<table id="totalRenderTable">
+			<thead>
+				<tr>
+					<th onclick="sortTable('totalRenderTable', 0)">Date</th>
+					<th onclick="sortTable('totalRenderTable', 1)">Total Render Time (seconds)</th>
+					<th onclick="sortTable('totalRenderTable', 2)">Total Render Time (minutes)</th>
+					<th onclick="sortTable('totalRenderTable', 3)">Total Successful Frames</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+		
+		<div class="chart-container">
+            <canvas id="totalRenderBarChart"></canvas>
+        </div>
+		
+		
+		        <h2>Largest Render Times</h2>
+        <table id="largestRenderTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable('largestRenderTable', 0)">Date</th>
+                    <th onclick="sortTable('largestRenderTable', 1)">Render Time (seconds)</th>
+                    <th onclick="sortTable('largestRenderTable', 2)">Render Time (minutes)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+		
+
+
+       
+
+        <h2>General Stats</h2>
+        <table id="generalStatsTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable('generalStatsTable', 0)">Date</th>
+                    <th onclick="sortTable('generalStatsTable', 1)">Job Canceled</th>
+                    <th onclick="sortTable('generalStatsTable', 2)">Client Restart</th>
+                    <th onclick="sortTable('generalStatsTable', 3)">Beta Release</th>
+                    <th onclick="sortTable('generalStatsTable', 4)">Relaunch</th>
+                    <th onclick="sortTable('generalStatsTable', 5)">Parsed</th>
+                    <th onclick="sortTable('generalStatsTable', 6)">Usage Failures</th>
+                    <th onclick="sortTable('generalStatsTable', 7)">Abort</th>
+                    <th onclick="sortTable('generalStatsTable', 8)">Consecutive Failures</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+	
+document.addEventListener('DOMContentLoaded', () => {
+    // Retrieve the file content from local storage
+    const fileContent = localStorage.getItem('uploadedFileContent');
+
+    if (fileContent) {
+        // Process the file content
+        parseLogFile(fileContent);
+
+        // Clear the local storage to avoid re-processing on page refresh
+        localStorage.removeItem('uploadedFileContent');
+
+        // Reveal the content after file is processed
+        document.getElementById('content').style.display = 'block';
+    } 
+});
+
+
+	
+	
+	
+		document.getElementById('fileInput').addEventListener('change', function () {
+    const fileName = this.files.length > 0 ? this.files[0].name : "No file chosen";
+    document.getElementById('fileNameDisplay').textContent = fileName;
+});
+
+        document.getElementById('fileInput').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const text = await file.text();
+            parseLogFile(text);
+
+            // Reveal the content after file is processed
+            document.getElementById('content').style.display = 'block';
+        });
+
+        
+        let successChartInstance = null;
+        let totalRenderBarChartInstance = null;
+        let framesLineChartInstance = null;
+
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+
+        async function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const text = await file.text();
+            parseLogFile(text);
+        }
+
+        function parseLogFile(logText) {
+            const successFailure = { success: 0, failed: 0 };
+            const largestRenders = [];
+            const framesByDate = {};
+            const generalStatsByDate = {};
+
+            let startDate = null, endDate = null;
+
+            const logBlocks = logText.split(/> Render Log Results:/g);
+
+            logBlocks.forEach((block, index) => {
+                const dateMatch = block.match(/START DATE SELECTED: (\d{2}\/\d{2}\/\d{4})/);
+                const successMatch = block.match(/sent render finished, job completed successfully: (\d+)/);
+                const failedMatch = block.match(/> Failed Frames[\s\S]*?Failed Renders: (\d+)/);
+                const framesRenderedMatch = block.match(/Total Frames Rendered: (\d+)/);
+                const noRenderJob = block.includes("starting a new render job with config hash: 0");
+                const totalTimeMatch = block.match(/Total Render Time: (\d+\.\d+) seconds/);
+                const largestTimeMatch = block.match(/Largest Render Time: (\d+\.\d+) seconds/);
+
+                // Regex for general stats lines
+                const jobCanceledMatch = block.match(/Job was Canceled:\s*(\d+)/);
+                const clientRestartMatch = block.match(/RNDR Client is Starting:\s*(\d+)/);
+                const betaReleaseMatch = block.match(/Restarting for Beta Release:\s*(\d+)/);
+                const relaunchMatch = block.match(/Restarting Beta Relaunch \(A\/B Testing\):\s*(\d+)/);
+                const parsedMatch = block.match(/parsed settings from rndr-config\.ini:\s*(\d+)/);
+                const usageFailuresMatch = block.match(/failing job, resource usage is too high:\s*(\d+)/);
+                const abortMatch = block.match(/client is aborting a render:\s*(\d+)/);
+                const consecutiveFailuresMatch = block.match(/too many consecutive failures, restarting:\s*(\d+)/);
+
+                if (index === 1 && dateMatch) startDate = dateMatch[1];
+                if (dateMatch) endDate = dateMatch[1];
+
+                const date = dateMatch ? dateMatch[1] : "N/A";
+
+                if (!framesByDate[date]) {
+                    framesByDate[date] = { success: 0, failed: 0, renderTime: 0, downDay: false };
+                }
+
+                const framesRendered = framesRenderedMatch ? parseInt(framesRenderedMatch[1]) : 0;
+
+                if (noRenderJob && framesRendered === 0) {
+                    framesByDate[date].downDay = true;
+                }
+
+                framesByDate[date].success += successMatch ? parseInt(successMatch[1]) : 0;
+                framesByDate[date].failed += failedMatch ? parseInt(failedMatch[1]) : 0;
+                framesByDate[date].renderTime += totalTimeMatch ? parseFloat(totalTimeMatch[1]) : 0;
+
+                successFailure.success += successMatch ? parseInt(successMatch[1]) : 0;
+                successFailure.failed += failedMatch ? parseInt(failedMatch[1]) : 0;
+
+                if (largestTimeMatch) {
+                    largestRenders.push({ date, time: parseFloat(largestTimeMatch[1]) });
+                }
+
+                // Initialize general stats if not present
+                if (!generalStatsByDate[date]) {
+                    generalStatsByDate[date] = {
+                        jobCanceled: 0,
+                        clientRestart: 0,
+                        betaRelease: 0,
+                        relaunch: 0,
+                        parsed: 0,
+                        usageFailures: 0,
+                        abort: 0,
+                        consecutiveFailures: 0
+                    };
+                }
+
+                generalStatsByDate[date].jobCanceled += jobCanceledMatch ? parseInt(jobCanceledMatch[1]) : 0;
+                generalStatsByDate[date].clientRestart += clientRestartMatch ? parseInt(clientRestartMatch[1]) : 0;
+                generalStatsByDate[date].betaRelease += betaReleaseMatch ? parseInt(betaReleaseMatch[1]) : 0;
+                generalStatsByDate[date].relaunch += relaunchMatch ? parseInt(relaunchMatch[1]) : 0;
+                generalStatsByDate[date].parsed += parsedMatch ? parseInt(parsedMatch[1]) : 0;
+                generalStatsByDate[date].usageFailures += usageFailuresMatch ? parseInt(usageFailuresMatch[1]) : 0;
+                generalStatsByDate[date].abort += abortMatch ? parseInt(abortMatch[1]) : 0;
+                generalStatsByDate[date].consecutiveFailures += consecutiveFailuresMatch ? parseInt(consecutiveFailuresMatch[1]) : 0;
+            });
+
+            const allDates = generateAllDates(startDate, endDate);
+            const filledData = fillMissingDates(allDates, framesByDate);
+
+            const generalStatsData = allDates.map(date => {
+                const stats = generalStatsByDate[date] || {
+                    jobCanceled: 0,
+                    clientRestart: 0,
+                    betaRelease: 0,
+                    relaunch: 0,
+                    parsed: 0,
+                    usageFailures: 0,
+                    abort: 0,
+                    consecutiveFailures: 0
+                };
+                return { date, ...stats };
+            });
+
+            displaySummary(successFailure, startDate, endDate, filledData);
+            displayTable('largestRenderTable', largestRenders);
+            displayTable('totalRenderTable', filledData.map(d => ({ date: d.date, time: d.renderTime })));
+            displayFramesTable('successfulFramesTable', filledData);
+            displayGeneralStatsTable('generalStatsTable', generalStatsData);
+
+            renderPieChart(successFailure);
+            renderBarChart(filledData);
+            renderLineChart(filledData);
+        }
+
+     function displaySummary(stats, startDate, endDate, data) {
+    const totalDays = data.length;
+    const downDays = data.filter(d => d.downDay).length;
+    const totalRenderTime = data.reduce((sum, d) => sum + d.renderTime, 0);
+    const averageRenderTime = totalRenderTime / totalDays;
+    const totalRenders = stats.success + stats.failed;
+    const successRate = totalRenders > 0 ? ((stats.success / totalRenders) * 100).toFixed(2) : 0;
+    const failureRate = totalRenders > 0 ? ((stats.failed / totalRenders) * 100).toFixed(2) : 0;
+
+    // Calculate total time in range (in seconds and hours)
+    const totalTimeInRange = totalDays * 24 * 3600; // in seconds
+    const totalHoursInRange = totalDays * 24; // in hours
+
+    // Calculate Render Time Percentage and Idle Time Percentage
+    const renderTimePercentage = ((totalRenderTime / totalTimeInRange) * 100).toFixed(2);
+    const idleTimePercentage = (100 - renderTimePercentage).toFixed(2);
+    const idleTime = totalTimeInRange - totalRenderTime;
+
+    // Calculate Idle Time in days, hours, minutes, and seconds
+    const idleDays = Math.floor(idleTime / (24 * 3600));
+    const idleHours = Math.floor((idleTime % (24 * 3600)) / 3600);
+    const idleMinutes = Math.floor((idleTime % 3600) / 60);
+    const idleSeconds = Math.floor(idleTime % 60);
+
+    // Find the date with the largest number of successful frames
+    const largestSuccessDay = data.reduce(
+        (max, d) => (d.success > max.success ? d : max),
+        { date: "N/A", success: 0 }
+    );
+
+    // Find the largest frame render and its date
+    const largestFrame = data.reduce(
+        (max, d) => (d.renderTime > max.time ? { date: d.date, time: d.renderTime } : max),
+        { date: "N/A", time: 0 }
+    );
+
+    // Find the date with the largest number of failed frames
+    const largestFailedDay = data.reduce(
+        (max, d) => (d.failed > max.failed ? d : max),
+        { date: "N/A", failed: 0 }
+    );
+
+    // Utility function to get the day of the week from a date
+    function getDayOfWeek(dateString) {
+        const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const [day, month, year] = dateString.split('/').map(Number);
+        const date = new Date(year, month - 1, day);
+        return daysOfWeek[date.getDay()];
+    }
+
+    // Get the days of the week for the start and end dates
+    const startDayOfWeek = getDayOfWeek(startDate);
+    const endDayOfWeek = getDayOfWeek(endDate);
+
+    // Utility function to convert seconds to hours, minutes, and seconds
+    function formatTime(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${hours}h ${minutes}m ${secs}s`;
+    }
+
+    const summaryDiv = document.getElementById('summary');
+summaryDiv.innerHTML = `
+    <div class="summary-container">
+        <!-- Box 1: Date Range Information -->
+        <div class="summary-box">
+            <h3>Date Range</h3>
+            <p><strong>Start Date:</strong> ${startDate} (${startDayOfWeek})</p>
+            <p><strong>End Date:</strong> ${endDate} (${endDayOfWeek})</p>
+            <p><strong>Total Days in Range:</strong> ${totalDays}</p>
+            <p><strong>Total Hours in Range:</strong> ${totalHoursInRange}h</p>
+			<p><strong>Down Days:</strong> ${downDays}</p>
+        </div>
+        <!-- Box 2: Render Statistics -->
+        <div class="summary-box">
+            <h3>Render Statistics</h3>
+            <p><strong>Successful Renders:</strong> ${stats.success}</p>
+            <p><strong>Failed Renders:</strong> ${stats.failed}</p>
+            <p><strong>Success Rate:</strong> ${successRate}%</p>
+            <p><strong>Failure Rate:</strong> ${failureRate}%</p>
+        </div>
+        <!-- Box 3: Time and Efficiency -->
+        <div class="summary-box">
+            <h3>Time and Efficiency</h3>
+            <p><strong>Total Render Time:</strong> ${formatTime(totalRenderTime)}</p>
+            <p><strong>Average Render Time per Day:</strong> ${formatTime(averageRenderTime)}</p>
+            <p><strong>Render Time Percentage:</strong> ${renderTimePercentage}%</p>
+            <p><strong>Idle Time:</strong> ${idleDays}d ${idleHours}h ${idleMinutes}m ${idleSeconds}s</p>
+            <p><strong>Idle Time Percentage:</strong> ${idleTimePercentage}%</p>
+        </div>
+        <!-- Box 4: Notable Days -->
+        <div class="summary-box">
+            <h3>Notable Days</h3>
+            <p><strong>Date with Largest Successful Frames:</strong> ${largestSuccessDay.date} (${largestSuccessDay.success} frames)</p>
+            <p><strong>Largest Frame Rendered:</strong> ${formatTime(largestFrame.time)} on ${largestFrame.date}</p>
+            <p><strong>Date with Largest Failed Frames:</strong> ${largestFailedDay.date} (${largestFailedDay.failed} frames)</p>
+        </div>
+    </div>
+	`;
+
+}
+
+		
+
+
+        function displayTable(tableId, data) {
+            const tableBody = document.querySelector(`#${tableId} tbody`);
+            tableBody.innerHTML = data.map(item => `
+                <tr>
+                    <td>${item.date}</td>
+                    <td>${item.time.toFixed(2)} seconds</td>
+                    <td>${(item.time / 60).toFixed(2)} minutes</td>
+					
+                </tr>
+            `).join('');
+        }
+
+        function displayFramesTable(tableId, data) {
+            const tableBody = document.querySelector(`#${tableId} tbody`);
+            tableBody.innerHTML = data.map(item => `
+                <tr>
+                    <td>${item.date}</td>
+                    <td>${item.success}</td>
+                    <td>${item.failed}</td>
+                </tr>
+            `).join('');
+        }
+
+        function displayGeneralStatsTable(tableId, data) {
+            const tableBody = document.querySelector(`#${tableId} tbody`);
+            tableBody.innerHTML = data.map(item => `
+                <tr>
+                    <td>${item.date}</td>
+                    <td>${item.jobCanceled}</td>
+                    <td>${item.clientRestart}</td>
+                    <td>${item.betaRelease}</td>
+                    <td>${item.relaunch}</td>
+                    <td>${item.parsed}</td>
+                    <td>${item.usageFailures}</td>
+                    <td>${item.abort}</td>
+                    <td>${item.consecutiveFailures}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPieChart(data) {
+            if (successChartInstance) {
+                successChartInstance.destroy();
+            }
+            successChartInstance = new Chart(document.getElementById('successChart'), {
+                type: 'pie',
+                data: {
+                    labels: ['Successful Renders', 'Failed Renders'],
+                    datasets: [{ data: [data.success, data.failed], backgroundColor: ['#4CAF50', '#F44336'] }]
+                }
+            });
+        }
+
+        function renderBarChart(data) {
+    if (totalRenderBarChartInstance) {
+        totalRenderBarChartInstance.destroy();
+    }
+    const ctx = document.getElementById('totalRenderBarChart').getContext('2d');
+    totalRenderBarChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.date),
+            datasets: [
+                {
+                    label: 'Total Render Time (seconds)',
+                    data: data.map(d => d.renderTime),
+                    backgroundColor: '#3498db', // Blue bars
+                    borderColor: '#2980b9', // Darker blue border for bars
+                    borderWidth: 1, // Thin border
+                    hoverBackgroundColor: '#5dade2', // Lighter blue on hover
+                    hoverBorderColor: '#1f618d' // Darker border on hover
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // Allow fixed height
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#f0f0f0' // Light text for legend
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#f0f0f0' // Light text for x-axis labels
+                    },
+                    grid: {
+                        color: '#555', // Subtle grid lines for x-axis
+                        drawOnChartArea: false // Only draw grid lines for ticks
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: '#f0f0f0' // Light text for y-axis labels
+                    },
+                    grid: {
+                        color: '#555' // Subtle grid lines for y-axis
+                    },
+                    beginAtZero: true
+                }
+            },
+            layout: {
+                padding: {
+                    top: 20, // Extra padding at the top
+                    bottom: 10
+                }
+            }
+        }
+    });
+}
+
+
+function renderLineChart(data) {
+    if (framesLineChartInstance) {
+        framesLineChartInstance.destroy();
+    }
+    const ctx = document.getElementById('framesLineChart').getContext('2d');
+    framesLineChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.date),
+            datasets: [
+                {
+                    label: 'Successful Frames',
+                    data: data.map(d => d.success),
+                    borderColor: '#3498db', // Blue for successful frames
+                    backgroundColor: 'rgba(52, 152, 219, 0.2)', // Semi-transparent blue for fill
+                    tension: 0.0, // Smooth curve
+                    fill: true, // Fill the area under the line
+                },
+                {
+                    label: 'Failed Frames',
+                    data: data.map(d => d.failed),
+                    borderColor: '#e74c3c', // Red for failed frames
+                    backgroundColor: 'rgba(231, 76, 60, 0.2)', // Semi-transparent red for fill
+                    tension: 0.0, // Smooth curve
+                    fill: true, // Fill the area under the line
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#f0f0f0' // Light text for the legend
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#f0f0f0' // Light text for x-axis labels
+                    },
+                    grid: {
+                        color: '#555' // Subtle grid lines for x-axis
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: '#f0f0f0' // Light text for y-axis labels
+                    },
+                    grid: {
+                        color: '#555' // Subtle grid lines for y-axis
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+
+        function sortTable(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            const rows = Array.from(table.rows).slice(1);
+            const ascending = !(table.dataset.sortAsc === "true");
+            table.dataset.sortAsc = ascending;
+
+            rows.sort((a, b) => {
+                const textA = a.cells[columnIndex].innerText.trim();
+                const textB = b.cells[columnIndex].innerText.trim();
+
+                const matchA = textA.match(/[\d.]+/);
+                const matchB = textB.match(/[\d.]+/);
+
+                const numA = matchA ? parseFloat(matchA[0]) : NaN;
+                const numB = matchB ? parseFloat(matchB[0]) : NaN;
+
+                const isANum = !isNaN(numA);
+                const isBNum = !isNaN(numB);
+
+                if (isANum && isBNum) {
+                    return ascending ? numA - numB : numB - numA;
+                } else {
+                    return ascending ? textA.localeCompare(textB) : textB.localeCompare(textA);
+                }
+            });
+
+            rows.forEach(row => table.tBodies[0].appendChild(row));
+        }
+
+        function generateAllDates(startDate, endDate) {
+            const dates = [];
+            let currentDate = new Date(startDate.split("/").reverse().join("-"));
+            const lastDate = new Date(endDate.split("/").reverse().join("-"));
+
+            while (currentDate <= lastDate) {
+                dates.push(currentDate.toISOString().split("T")[0].split("-").reverse().join("/"));
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return dates;
+        }
+
+        function fillMissingDates(allDates, data) {
+            return allDates.map(date => ({
+                date,
+                success: data[date] ? data[date].success : 0,
+                failed: data[date] ? data[date].failed : 0,
+                renderTime: data[date] ? data[date].renderTime : 0,
+                downDay: data[date] ? data[date].downDay : false
+            }));
+        }
+    
+    </script>
+</body>
+</html>
