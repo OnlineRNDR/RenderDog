@@ -86,4 +86,14 @@ Sync the navigation to the end date of the selected range.
 Once synced, you can navigate day-by-day backward starting from the last date.
 Example Use Case
 
- 
+ ![image](https://github.com/user-attachments/assets/88b15fba-047a-413e-9889-5a066412b59b)
+ ![image](https://github.com/user-attachments/assets/9e4603d5-fa23-4555-bec2-f5ae58ed4b44)
+![image](https://github.com/user-attachments/assets/acfe5d0d-97a9-4b4d-bfdb-29faf6de4e57)
+![image](https://github.com/user-attachments/assets/ef122cf1-874f-442b-a081-29d6c6f80e6f)
+![image](https://github.com/user-attachments/assets/cb8f41c0-ae04-411b-b9a5-5ede91c2eca9)
+![image](https://github.com/user-attachments/assets/c0c573e9-1b23-48ca-9438-a2f92073ebdd)
+![image](https://github.com/user-attachments/assets/fa7acd36-d5a0-43c3-a429-70a1ff9a0164)
+
+
+
+
