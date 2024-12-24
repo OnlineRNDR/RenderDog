@@ -181,3 +181,20 @@ A tabular breakdown of successful and failed frames per day for clear, day-by-da
 This tool provides an organized and
 
 
+# Extra 
+Added a couple of goodies to kill the boredom when watching the render client. 
+
+
+# Notes from Author 
+
+Please take into consideration I am an artist, not a coder "JIM". 
+This was half written by Chat GPT , the messy parts was written by me and 100% not perfect. 
+I have a better understanding of the code and my intention is to remake. 
+Any bugs or questions please contact me on the Node Opps Slack Channel.
+
+Cheers OnlineRNDR 
+
+
+
+
+
