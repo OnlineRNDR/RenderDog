@@ -30,3 +30,60 @@ Frame Cost Calculator:
 
 Enables users to input token data to estimate rendering costs on the Render Network.
 Render-Dog provides an all-in-one solution for professionals using the Render Network, combining detailed log insights, visual analytics, and cost estimation to optimize workflows and improve rendering efficiency.
+
+ 
+![image](https://github.com/user-attachments/assets/34f666fc-cac6-4047-991d-d3fec4cd46f0)
+
+# Interface
+Render-Dog Log Viewer: Features
+Load Rndr Log
+Upload your rndr_log.txt file to begin parsing and analyzing your Render Network log data. This step initializes the tool and prepares the logs for processing based on the selected date range.
+
+Save Results
+Save all parsed and displayed results for the selected date range as a single .txt file. This file contains the summarized stats and log details within the chosen calendar period, providing a convenient way to archive data.
+
+Export Report
+Export a comprehensive day-by-day report for the selected date range into a file named Report_Dog.txt. This file can be used with the reports.html page to visualize and analyze individual daily logs in more detail.
+
+Export Weekly
+Generate weekly summaries based on the first selected date in the calendar (e.g., Wednesday to Wednesday). Each week’s data will be exported into a separate .txt file, making it ideal for recurring reporting workflows. These files are compatible with the weekly.html page for a deeper breakdown of weekly performance.
+
+Example Workflow
+Upload your log file using Load Rndr Log.
+Select a date range using the calendar.
+Save Results to archive the summarized data for the selected range.
+Generate a detailed day-by-day report using Export Report.
+Alternatively, create weekly summaries with Export Weekly for broader analysis.
+Compatibility
+Reports generated with Export Report can be directly loaded into reports.html for visualization.
+Weekly summaries from Export Weekly are compatible with weekly.html for weekly breakdowns.
+
+![image](https://github.com/user-attachments/assets/24a7921a-39f4-412f-9394-de1e668aa562)
+
+Calendar Navigation
+The Calendar Navigation section allows you to customize and navigate through your log data based on specific date ranges. Below are the key features:
+
+Start and End Date
+Select a start and end date to filter and view the log data within the chosen range.
+This feature enables precise control over the period you want to analyze.
+
+Navigation Buttons
+Left Arrow & Right Arrow
+Move the start date forward or backward by one day, allowing easy day-to-day navigation within the calendar range.
+
+Save Icon
+Save the currently selected date range for future reference.
+
+Refresh Icon
+Recall the previously saved dates using the Save Icon, restoring the date range selection.
+
+Orange Icon
+Sync the navigation to the start date of the selected range.
+Once synced, you can navigate day-by-day starting from the first date.
+
+Blue Icon
+Sync the navigation to the end date of the selected range.
+Once synced, you can navigate day-by-day backward starting from the last date.
+Example Use Case
+
+ 
